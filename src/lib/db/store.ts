@@ -1,7 +1,23 @@
 // Unified State Store for ArafatBoucherieCompta
 // Handles both LocalStorage caching/fallback and CRUD triggers.
+import { supabase, isSupabaseConfigured } from './client';
 
 export type UserRole = 'admin' | 'vendeur';
+
+const isUuid = (id: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
+
+const generateId = (prefix: string): string => {
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
 
 export interface Profile {
   id: string;
@@ -267,6 +283,265 @@ const setLocalStorageData = <T>(key: string, data: T) => {
 };
 
 export class LocalDbStore {
+  // Supabase CRUD Sync helper
+  static async syncToSupabase(table: string, action: 'insert' | 'update' | 'delete' | 'upsert', record: any): Promise<void> {
+    if (!isSupabaseConfigured() || !supabase) return;
+    try {
+      const snakeRecord: any = {};
+      for (const key of Object.keys(record)) {
+        if (['supplierName', 'productName', 'employeeName'].includes(key)) continue;
+        
+        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        
+        if (key === 'workingDays' && Array.isArray(record[key])) {
+          snakeRecord.working_days = record[key];
+        } else {
+          snakeRecord[snakeKey] = record[key];
+        }
+      }
+
+      if (action === 'insert') {
+        await supabase.from(table).insert(snakeRecord);
+      } else if (action === 'update') {
+        await supabase.from(table).update(snakeRecord).eq('id', record.id);
+      } else if (action === 'delete') {
+        await supabase.from(table).delete().eq('id', record.id);
+      } else if (action === 'upsert') {
+        await supabase.from(table).upsert(snakeRecord);
+      }
+    } catch (e) {
+      console.error(`Error syncing ${action} to Supabase table ${table}:`, e);
+    }
+  }
+  // Supabase Synchronizer
+  static async syncFromSupabase(): Promise<void> {
+    if (!isSupabaseConfigured() || !supabase) return;
+
+    try {
+      console.log('Synchronisation avec Supabase...');
+
+      const [
+        rSuppliers,
+        rProducts,
+        rSales,
+        rExpenses,
+        rOutputs,
+        rStockRestant,
+        rDebts,
+        rDebtPayments,
+        rEmployees,
+        rSalaries,
+        rCashRegistries,
+        rLogs,
+        rProfiles
+      ] = await Promise.all([
+        supabase.from('suppliers').select('*'),
+        supabase.from('products').select('*'),
+        supabase.from('sales').select('*'),
+        supabase.from('expenses').select('*'),
+        supabase.from('outputs').select('*'),
+        supabase.from('stock_restant').select('*'),
+        supabase.from('debts').select('*'),
+        supabase.from('debt_payments').select('*'),
+        supabase.from('employees').select('*'),
+        supabase.from('salaries').select('*'),
+        supabase.from('cash_registry').select('*'),
+        supabase.from('activity_logs').select('*'),
+        supabase.from('profiles').select('*')
+      ]);
+
+      if (rSuppliers.data) {
+        const suppliers = rSuppliers.data.map((s) => ({
+          id: s.id,
+          name: s.name,
+          phone: s.phone,
+          address: s.address || '',
+          notes: s.notes || '',
+          createdAt: s.created_at
+        }));
+        setLocalStorageData('boucherie_suppliers', suppliers);
+      }
+
+      if (rProducts.data) {
+        const products = rProducts.data.map((p) => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          unitPrice: Number(p.unit_price),
+          quantity: Number(p.quantity),
+          supplierId: p.supplier_id || '',
+          observations: p.observations || '',
+          createdAt: p.created_at,
+          updatedAt: p.updated_at
+        }));
+        setLocalStorageData('boucherie_products', products);
+      }
+
+      if (rSales.data) {
+        const sales = rSales.data.map((s) => ({
+          id: s.id,
+          productId: s.product_id,
+          productName: '',
+          quantity: Number(s.quantity),
+          unitPrice: Number(s.unit_price),
+          totalAmount: Number(s.total_amount),
+          paymentMethod: s.payment_method,
+          sellerName: s.seller_name,
+          createdAt: s.created_at,
+          sourceSortieId: s.source_sortie_id || undefined
+        }));
+        setLocalStorageData('boucherie_sales', sales);
+      }
+
+      if (rExpenses.data) {
+        const expenses = rExpenses.data.map((e) => ({
+          id: e.id,
+          amount: Number(e.amount),
+          category: e.category,
+          description: e.description || '',
+          recordedBy: e.recorded_by,
+          createdAt: e.created_at
+        }));
+        setLocalStorageData('boucherie_expenses', expenses);
+      }
+
+      if (rOutputs.data) {
+        const outputs = rOutputs.data.map((o) => ({
+          id: o.id,
+          productId: o.product_id,
+          productName: '',
+          quantity: Number(o.quantity),
+          unitPrice: Number(o.unit_price),
+          totalAmount: Number(o.total_amount),
+          employeeName: o.employee_name,
+          notes: o.notes || '',
+          createdAt: o.created_at,
+          status: o.status || 'en_cours',
+          remainingQuantity: o.remaining_quantity !== null ? Number(o.remaining_quantity) : undefined,
+          soldQuantity: o.sold_quantity !== null ? Number(o.sold_quantity) : undefined,
+          paymentMethod: o.payment_method || undefined
+        }));
+        setLocalStorageData('boucherie_outputs', outputs);
+      }
+
+      if (rStockRestant.data) {
+        const restants = rStockRestant.data.map((sr) => ({
+          id: sr.id,
+          productId: sr.product_id,
+          productName: '',
+          quantity: Number(sr.quantity),
+          totalValue: Number(sr.total_value),
+          paymentMethod: sr.payment_method,
+          recordedBy: sr.recorded_by,
+          createdAt: sr.created_at
+        }));
+        setLocalStorageData('boucherie_stock_restant', restants);
+      }
+
+      if (rDebts.data) {
+        const debts = rDebts.data.map((d) => ({
+          id: d.id,
+          supplierId: d.supplier_id,
+          supplierName: '',
+          totalAmount: Number(d.total_amount),
+          paidAmount: Number(d.paid_amount),
+          remainingAmount: Number(d.remaining_amount),
+          dueDate: d.due_date || undefined,
+          status: d.status,
+          createdAt: d.created_at
+        }));
+        setLocalStorageData('boucherie_debts', debts);
+      }
+
+      if (rDebtPayments.data) {
+        const debtPayments = rDebtPayments.data.map((dp) => ({
+          id: dp.id,
+          debtId: dp.debt_id,
+          amountPaid: Number(dp.amount_paid),
+          recordedBy: dp.recorded_by,
+          createdAt: dp.created_at
+        }));
+        setLocalStorageData('boucherie_debt_payments', debtPayments);
+      }
+
+      if (rEmployees.data) {
+        const employees = rEmployees.data.map((e) => ({
+          id: e.id,
+          firstName: e.first_name,
+          lastName: e.last_name,
+          phone: e.phone,
+          hireDate: e.hire_date,
+          position: e.position,
+          active: e.active,
+          workingDays: Array.isArray(e.working_days) ? e.working_days : [true, true, true, true, true, true, true],
+          createdAt: e.created_at
+        }));
+        setLocalStorageData('boucherie_employees', employees);
+      }
+
+      if (rSalaries.data) {
+        const salaries = rSalaries.data.map((s) => ({
+          id: s.id,
+          employeeId: s.employee_id,
+          employeeName: '',
+          dailyWage: Number(s.daily_wage),
+          amountPaid: Number(s.amount_paid),
+          status: s.status,
+          notes: s.notes || '',
+          paidAt: s.paid_at,
+          createdAt: s.created_at
+        }));
+        setLocalStorageData('boucherie_salaries', salaries);
+      }
+
+      if (rCashRegistries.data) {
+        const cashRegistries = rCashRegistries.data.map((cr) => ({
+          id: cr.id,
+          date: cr.date,
+          startingCash: Number(cr.starting_cash),
+          salesTotal: Number(cr.sales_total),
+          expensesTotal: Number(cr.expenses_total),
+          salariesTotal: Number(cr.salaries_total),
+          endingCash: Number(cr.ending_cash),
+          createdAt: cr.created_at
+        }));
+        setLocalStorageData('boucherie_cash_registries', cashRegistries);
+      }
+
+      if (rLogs.data) {
+        const logs = rLogs.data.map((l) => ({
+          id: l.id,
+          action: l.action,
+          details: l.details || '',
+          userName: l.user_name,
+          createdAt: l.created_at
+        }));
+        setLocalStorageData('boucherie_activity_logs', logs);
+      }
+
+      if (rProfiles.data) {
+        const accounts = rProfiles.data.map((p) => ({
+          id: p.id,
+          email: p.email,
+          fullName: p.full_name || '',
+          phone: p.phone || '',
+          role: p.role,
+          companyName: p.company_name || '',
+          password: '',
+          status: p.status,
+          createdAt: p.created_at,
+          avatar: p.avatar || undefined
+        }));
+        setLocalStorageData('boucherie_accounts', accounts);
+      }
+
+      console.log('Synchronisation Supabase terminée avec succès.');
+    } catch (error) {
+      console.error('Erreur lors de la synchronisation Supabase:', error);
+    }
+  }
+
+
   // Read operations
   static getSuppliers(): Supplier[] {
     return getLocalStorageData('boucherie_suppliers', MOCK_SUPPLIERS);
@@ -359,12 +634,13 @@ export class LocalDbStore {
     const dateStr = product.createdAt || new Date().toISOString();
     const newProduct: Product = {
       ...product,
-      id: 'prod-' + Date.now(),
+      id: generateId('prod'),
       createdAt: dateStr,
       updatedAt: new Date().toISOString()
     };
     products.push(newProduct);
     setLocalStorageData('boucherie_products', products);
+    this.syncToSupabase('products', 'insert', newProduct);
 
     // Record in history
     this.addStockHistory(newProduct.id, 'Entrée', newProduct.quantity, newProduct.quantity, 'Stock Initial créé', userName, dateStr);
@@ -388,6 +664,7 @@ export class LocalDbStore {
     };
     products[index] = updated;
     setLocalStorageData('boucherie_products', products);
+    this.syncToSupabase('products', 'update', updated);
 
     // If quantity changed, record in history
     if (updates.quantity !== undefined && updates.quantity !== original.quantity) {
@@ -423,6 +700,7 @@ export class LocalDbStore {
       product.quantity -= sale.quantity;
       product.updatedAt = new Date().toISOString();
       setLocalStorageData('boucherie_products', products);
+      this.syncToSupabase('products', 'update', product);
 
       // Record stock history
       this.addStockHistory(product.id, 'Vente', -sale.quantity, product.quantity, `Vente de ${sale.quantity} pièces`, userName);
@@ -432,13 +710,14 @@ export class LocalDbStore {
     const sales = this.getSales();
     const newSale: Sale = {
       ...sale,
-      id: 'sale-' + Date.now(),
+      id: generateId('sale'),
       productName: product.name,
       totalAmount: sale.quantity * sale.unitPrice,
       createdAt: sale.createdAt || new Date().toISOString()
     };
     sales.push(newSale);
     setLocalStorageData('boucherie_sales', sales);
+    this.syncToSupabase('sales', 'insert', newSale);
 
     // Update caisse
     this.addActivityLog('Enregistrement Vente', `Vente de ${sale.quantity} ${product.name} (${newSale.totalAmount} FCFA en ${sale.paymentMethod})`, userName);
@@ -471,6 +750,7 @@ export class LocalDbStore {
         product.quantity -= updates.quantity;
         product.updatedAt = new Date().toISOString();
         setLocalStorageData('boucherie_products', products);
+        this.syncToSupabase('products', 'update', product);
 
         const diff = updates.quantity - original.quantity;
         this.addStockHistory(
@@ -494,6 +774,7 @@ export class LocalDbStore {
 
     sales[index] = updatedSale;
     setLocalStorageData('boucherie_sales', sales);
+    this.syncToSupabase('sales', 'update', updatedSale);
 
     this.addActivityLog('Modification Vente', `Vente ${updatedSale.productName} modifiée : ${updatedSale.quantity} pièces (${updatedSale.totalAmount} FCFA)`, userName);
     this.recalculateCaisseForDate(originalDate);
@@ -519,6 +800,7 @@ export class LocalDbStore {
         products[pIndex].quantity += sale.quantity;
         products[pIndex].updatedAt = new Date().toISOString();
         setLocalStorageData('boucherie_products', products);
+        this.syncToSupabase('products', 'update', products[pIndex]);
 
         this.addStockHistory(
           sale.productId,
@@ -534,6 +816,7 @@ export class LocalDbStore {
 
     const updatedSales = sales.filter(s => s.id !== id);
     setLocalStorageData('boucherie_sales', updatedSales);
+    this.syncToSupabase('sales', 'delete', { id });
 
     this.addActivityLog('Suppression Vente', `Vente ${sale.productName} de ${sale.quantity} pièces annulée.`, userName);
     this.recalculateCaisseForDate(dateStr);
@@ -554,6 +837,7 @@ export class LocalDbStore {
     product.quantity -= output.quantity;
     product.updatedAt = new Date().toISOString();
     setLocalStorageData('boucherie_products', products);
+    this.syncToSupabase('products', 'update', product);
 
     // Record stock history
     this.addStockHistory(product.id, 'Sortie', -output.quantity, product.quantity, `Sortie de stock: ${output.notes || 'Prélèvement pour vente'}`, userName);
@@ -562,7 +846,7 @@ export class LocalDbStore {
     const outputs = getLocalStorageData<Output[]>('boucherie_outputs', MOCK_OUTPUTS);
     const newOutput: Output = {
       ...output,
-      id: 'out-' + Date.now(),
+      id: generateId('out'),
       productName: product.name,
       totalAmount: 0,
       createdAt: output.createdAt || new Date().toISOString(),
@@ -570,6 +854,7 @@ export class LocalDbStore {
     };
     outputs.push(newOutput);
     setLocalStorageData('boucherie_outputs', outputs);
+    this.syncToSupabase('outputs', 'insert', newOutput);
 
     this.addActivityLog('Enregistrement Sortie', `Sortie de ${output.quantity} ${product.name} (en cours de vente - ${output.notes})`, userName);
     this.recalculateCaisseForDate(newOutput.createdAt.split('T')[0]);
@@ -805,6 +1090,7 @@ export class LocalDbStore {
     };
     restants.push(newRestant);
     setLocalStorageData('boucherie_stock_restant', restants);
+    this.syncToSupabase('stock_restant', 'insert', newRestant);
 
     // 1. Add remaining quantity back to fridge stock
     const dbProducts = getLocalStorageData('boucherie_products', MOCK_PRODUCTS);
@@ -963,6 +1249,7 @@ export class LocalDbStore {
     };
     expenses.push(newExpense);
     setLocalStorageData('boucherie_expenses', expenses);
+    this.syncToSupabase('expenses', 'insert', newExpense);
 
     this.addActivityLog('Enregistrement Dépense', `Dépense enregistrée : ${expense.category} - ${expense.amount} FCFA (${expense.description})`, userName);
     this.recalculateCaisseForDate(newExpense.createdAt.split('T')[0]);
@@ -987,6 +1274,7 @@ export class LocalDbStore {
 
     expenses[index] = updatedExpense;
     setLocalStorageData('boucherie_expenses', expenses);
+    this.syncToSupabase('expenses', 'update', updatedExpense);
 
     this.addActivityLog('Modification Dépense', `Dépense ${updatedExpense.category} modifiée : ${updatedExpense.amount} FCFA`, userName);
     this.recalculateCaisseForDate(originalDate);
@@ -1006,6 +1294,7 @@ export class LocalDbStore {
 
     const updatedExpenses = expenses.filter(e => e.id !== id);
     setLocalStorageData('boucherie_expenses', updatedExpenses);
+    this.syncToSupabase('expenses', 'delete', { id });
 
     this.addActivityLog('Suppression Dépense', `Dépense ${expense.category} de ${expense.amount} FCFA supprimée.`, userName);
     this.recalculateCaisseForDate(dateStr);
@@ -1016,11 +1305,12 @@ export class LocalDbStore {
     const suppliers = this.getSuppliers();
     const newSupplier: Supplier = {
       ...supplier,
-      id: 'sup-' + Date.now(),
+      id: generateId('sup'),
       createdAt: new Date().toISOString()
     };
     suppliers.push(newSupplier);
     setLocalStorageData('boucherie_suppliers', suppliers);
+    this.syncToSupabase('suppliers', 'insert', newSupplier);
     this.addActivityLog('Nouveau Fournisseur', `Fournisseur ${supplier.name} ajouté.`, userName);
     return newSupplier;
   }
@@ -1036,6 +1326,7 @@ export class LocalDbStore {
     };
     suppliers[index] = updated;
     setLocalStorageData('boucherie_suppliers', suppliers);
+    this.syncToSupabase('suppliers', 'update', updated);
     this.addActivityLog('Modif. Fournisseur', `Fournisseur ${updated.name} mis à jour.`, userName);
     return updated;
   }
@@ -1049,7 +1340,7 @@ export class LocalDbStore {
     const debts = this.getDebts();
     const newDebt: Debt = {
       ...debt,
-      id: 'debt-' + Date.now(),
+      id: generateId('debt'),
       supplierName: supplier.name,
       remainingAmount: debt.totalAmount - debt.paidAmount,
       status: debt.paidAmount === 0 ? 'En attente' : (debt.paidAmount >= debt.totalAmount ? 'Payée' : 'Partiellement payée'),
@@ -1057,6 +1348,7 @@ export class LocalDbStore {
     };
     debts.push(newDebt);
     setLocalStorageData('boucherie_debts', debts);
+    this.syncToSupabase('debts', 'insert', newDebt);
     this.addActivityLog('Nouvelle Dette', `Dette enregistrée pour ${supplier.name} : ${debt.totalAmount} FCFA.`, userName);
     return newDebt;
   }
@@ -1080,7 +1372,7 @@ export class LocalDbStore {
     // Save payment record
     const payments = this.getDebtPayments();
     const newPayment: DebtPayment = {
-      id: 'pay-' + Date.now(),
+      id: generateId('pay'),
       debtId: payment.debtId,
       amountPaid: payment.amountPaid,
       recordedBy: payment.recordedBy,
@@ -1088,6 +1380,8 @@ export class LocalDbStore {
     };
     payments.push(newPayment);
     setLocalStorageData('boucherie_debt_payments', payments);
+    this.syncToSupabase('debt_payments', 'insert', newPayment);
+    this.syncToSupabase('debts', 'update', debt);
 
     // Register as a cash expense to track ending balance correctly
     this.addExpense({
@@ -1107,11 +1401,12 @@ export class LocalDbStore {
     const employees = this.getEmployees();
     const newEmployee: Employee = {
       ...employee,
-      id: 'emp-' + Date.now(),
+      id: generateId('emp'),
       createdAt: new Date().toISOString()
     };
     employees.push(newEmployee);
     setLocalStorageData('boucherie_employees', employees);
+    this.syncToSupabase('employees', 'insert', newEmployee);
     this.addActivityLog('Nouvel Employé', `Employé ${employee.firstName} ${employee.lastName} ajouté.`, userName);
     return newEmployee;
   }
@@ -1127,6 +1422,7 @@ export class LocalDbStore {
     };
     employees[index] = updated;
     setLocalStorageData('boucherie_employees', employees);
+    this.syncToSupabase('employees', 'update', updated);
     this.addActivityLog('Modif. Employé', `Fiche de ${updated.firstName} ${updated.lastName} mise à jour.`, userName);
     return updated;
   }
@@ -1150,12 +1446,13 @@ export class LocalDbStore {
     const salaries = this.getSalaries();
     const newSalary: Salary = {
       ...salary,
-      id: 'sal-' + Date.now(),
+      id: generateId('sal'),
       employeeName: `${employee.firstName} ${employee.lastName}`,
       createdAt: new Date().toISOString()
     };
     salaries.push(newSalary);
     setLocalStorageData('boucherie_salaries', salaries);
+    this.syncToSupabase('salaries', 'insert', newSalary);
 
     // Link directly to expenses
     this.addExpense({
@@ -1176,7 +1473,7 @@ export class LocalDbStore {
     const products = getLocalStorageData('boucherie_products', MOCK_PRODUCTS);
     const product = products.find(p => p.id === productId);
     const newHistory: StockHistory = {
-      id: 'st-hist-' + Date.now(),
+      id: generateId('st-hist'),
       productId,
       productName: product ? product.name : 'Produit inconnu',
       changeType,
@@ -1188,12 +1485,26 @@ export class LocalDbStore {
     };
     history.push(newHistory);
     setLocalStorageData('boucherie_stock_history', history);
+    
+    const accounts = this.getAccounts();
+    const account = accounts.find(acc => acc.fullName.toLowerCase() === userName.toLowerCase() || acc.email.toLowerCase() === userName.toLowerCase());
+    const userId = account && isUuid(account.id) ? account.id : null;
+    this.syncToSupabase('stock_history', 'insert', {
+      id: newHistory.id,
+      productId: newHistory.productId,
+      changeType: newHistory.changeType,
+      quantityChanged: newHistory.quantityChanged,
+      quantityAfter: newHistory.quantityAfter,
+      notes: newHistory.notes,
+      userId,
+      createdAt: newHistory.createdAt
+    });
   }
 
   private static addActivityLog(action: string, details: string, userName: string) {
     const logs = this.getActivityLogs();
     const newLog: ActivityLog = {
-      id: 'log-' + Date.now(),
+      id: generateId('log'),
       action,
       details,
       userName,
@@ -1235,7 +1546,7 @@ export class LocalDbStore {
       }
 
       const newReg: CashRegistry = {
-        id: 'cash-' + Date.now(),
+        id: generateId('cash'),
         date: dateStr,
         startingCash,
         salesTotal,
@@ -1263,6 +1574,9 @@ export class LocalDbStore {
     }
 
     setLocalStorageData('boucherie_cash_registries', sortedRegs);
+    for (const reg of sortedRegs) {
+      this.syncToSupabase('cash_registry', 'upsert', reg);
+    }
   }
 
   static updateStartingCash(date: string, amount: number, userName: string) {
@@ -1270,7 +1584,7 @@ export class LocalDbStore {
     const index = registries.findIndex(r => r.date === date);
     if (index === -1) {
       const newReg: CashRegistry = {
-        id: 'cash-' + Date.now(),
+        id: generateId('cash'),
         date,
         startingCash: amount,
         salesTotal: 0,
@@ -1293,6 +1607,7 @@ export class LocalDbStore {
     const products = getLocalStorageData('boucherie_products', MOCK_PRODUCTS);
     const updated = products.map(p => p.id === id ? { ...p, active: false } : p);
     setLocalStorageData('boucherie_products', updated);
+    this.syncToSupabase('products', 'update', { id, active: false });
     
     // Find name for activity log
     const pName = products.find(p => p.id === id)?.name || 'Produit';
@@ -1312,6 +1627,7 @@ export class LocalDbStore {
     const dateStr = customDate || new Date().toISOString();
     product.updatedAt = new Date().toISOString();
     setLocalStorageData('boucherie_products', products);
+    this.syncToSupabase('products', 'update', product);
 
     // Record stock history
     this.addStockHistory(
@@ -1417,7 +1733,7 @@ export class LocalDbStore {
 
     const newAccount: UserAccount = {
       ...account,
-      id: 'acc-' + Date.now(),
+      id: generateId('acc'),
       createdAt: new Date().toISOString()
     };
     accounts.push(newAccount);
@@ -1439,6 +1755,7 @@ export class LocalDbStore {
     const account = accounts[index];
     account.status = status;
     setLocalStorageData('boucherie_accounts', accounts);
+    this.syncToSupabase('profiles', 'update', { id, status });
 
     this.addActivityLog(
       'Statut Compte',
@@ -1457,6 +1774,7 @@ export class LocalDbStore {
     const originalStatus = account.status;
     account.status = originalStatus === 'active' ? 'rejected' : 'active';
     setLocalStorageData('boucherie_accounts', accounts);
+    this.syncToSupabase('profiles', 'update', { id, status: account.status });
 
     this.addActivityLog(
       'Activation Compte',
@@ -1473,6 +1791,7 @@ export class LocalDbStore {
 
     accounts = accounts.filter(acc => acc.id !== id);
     setLocalStorageData('boucherie_accounts', accounts);
+    this.syncToSupabase('profiles', 'delete', { id });
 
     this.addActivityLog(
       'Suppression Compte',

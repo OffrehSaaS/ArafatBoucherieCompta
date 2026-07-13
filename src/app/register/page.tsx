@@ -35,7 +35,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [registeredPending, setRegisteredPending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -67,7 +67,7 @@ export default function RegisterPage() {
         status: 'pending' as const
       };
 
-      LocalDbStore.registerAccount(payload);
+      await LocalDbStore.registerAccount(payload);
       setRegisteredPending(true);
     } catch (err: any) {
       setError(err.message || "Erreur lors de la création du compte. L'adresse email est peut-être déjà prise.");
