@@ -888,6 +888,25 @@ export class LocalDbStore {
 
       // Record stock history
       this.addStockHistory(output.productId, 'Entrée', remainingQuantity, products[pIndex].quantity, `Retour de stock restant au frigo (Sortie ID: ${id})`, userName);
+      this.syncToSupabase('products', 'update', products[pIndex]);
+
+      // Auto-register in stock_restant (invendus fin de journée)
+      if (remainingQuantity > 0) {
+        const restants = this.getStockRestants();
+        const newRestant: StockRestant = {
+          id: generateId('sr'),
+          productId: output.productId,
+          productName: output.productName,
+          quantity: remainingQuantity,
+          totalValue: remainingQuantity * output.unitPrice,
+          paymentMethod: paymentMethod,
+          recordedBy: userName,
+          createdAt: dateStr
+        };
+        restants.push(newRestant);
+        setLocalStorageData('boucherie_stock_restant', restants);
+        this.syncToSupabase('stock_restant', 'insert', newRestant);
+      }
     }
 
     // 2. Automatically register Sale if soldQty > 0
@@ -1084,7 +1103,7 @@ export class LocalDbStore {
     const restants = this.getStockRestants();
     const newRestant: StockRestant = {
       ...entry,
-      id: 'sr-' + Date.now(),
+      id: generateId('sr'),
       productName: product.name,
       quantity
     };

@@ -45,7 +45,7 @@ export default function DepensesPage() {
 
   const categories = [
     'Eau', 'Tomates', 'Cube', 'Maggi', 'Piment', 'Huile', 
-    'Oignons', 'Charbon', 'Transport', 'Glace', 'Salaires', 'Divers'
+    'Oignons', 'Charbon', 'Transport', 'Glace', 'Salaires', 'Pertes', 'Divers'
   ];
 
   useEffect(() => {

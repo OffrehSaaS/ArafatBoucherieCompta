@@ -125,12 +125,11 @@ export default function DashboardPage() {
 
   // Selected Date's Expenses
   const todayExpensesRaw = expenses.filter(e => e.createdAt.startsWith(filterDateStr));
-  const dailyExpenses = todayExpensesRaw.filter(e => e.category !== 'Salaires').reduce((acc, e) => acc + e.amount, 0);
+  const dailyExpenses = todayExpensesRaw.filter(e => e.category !== 'Salaires' && e.category !== 'Pertes').reduce((acc, e) => acc + e.amount, 0);
   const dailySalaries = todayExpensesRaw.filter(e => e.category === 'Salaires').reduce((acc, e) => acc + e.amount, 0);
 
-  // Selected Date's Losses (Sorties)
-  const todayOutputs = outputs.filter(o => o.createdAt.startsWith(filterDateStr));
-  const dailyLosses = todayOutputs.reduce((acc, o) => acc + o.totalAmount, 0);
+  // Selected Date's Losses (Pertes déclarées)
+  const dailyLosses = todayExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
 
   // Current Caisse endingCash
   const registries = cashRegistries.filter(r => r.date === filterDateStr);
@@ -146,8 +145,8 @@ export default function DashboardPage() {
   const totalRemainingDebts = debts.reduce((acc, d) => acc + d.remainingAmount, 0);
 
   // Net Profit (Admin only)
-  // net_profit = CA - Expenses - Salaries - Losses
-  const netProfit = dailyCA - dailyExpenses - dailySalaries - dailyLosses;
+  // net_profit = Stock + Caisse - Expenses - Salaries - Losses - Debts
+  const netProfit = totalStockValue + caisseActuelle - dailyExpenses - dailySalaries - dailyLosses - totalRemainingDebts;
 
   // Active employees on the selected date
   const jsDay = new Date(filterDateStr).getDay(); // 0 is Sunday, 1 is Monday...
@@ -168,12 +167,12 @@ export default function DashboardPage() {
   const chartDataWeekly = last7Days.map(dateStr => {
     const dateSales = sales.filter(s => s.createdAt.startsWith(dateStr));
     const dateExpensesRaw = expenses.filter(e => e.createdAt.startsWith(dateStr));
-    const dateLosses = outputs.filter(o => o.createdAt.startsWith(dateStr));
+    const dateLosses = dateExpensesRaw.filter(e => e.category === 'Pertes');
 
     const salesTotal = dateSales.reduce((acc, s) => acc + s.totalAmount, 0);
-    const expensesTotal = dateExpensesRaw.filter(e => e.category !== 'Salaires').reduce((acc, e) => acc + e.amount, 0);
+    const expensesTotal = dateExpensesRaw.filter(e => e.category !== 'Salaires' && e.category !== 'Pertes').reduce((acc, e) => acc + e.amount, 0);
     const salariesTotal = dateExpensesRaw.filter(e => e.category === 'Salaires').reduce((acc, e) => acc + e.amount, 0);
-    const lossesTotal = dateLosses.reduce((acc, o) => acc + o.totalAmount, 0);
+    const lossesTotal = dateLosses.reduce((acc, e) => acc + e.amount, 0);
 
     const profit = salesTotal - expensesTotal - salariesTotal - lossesTotal;
 
@@ -186,7 +185,7 @@ export default function DashboardPage() {
   });
 
   // --- CHART 2: EXPENSES PIE CHART ---
-  const expenseCategories = ['Eau', 'Tomates', 'Cube', 'Maggi', 'Piment', 'Huile', 'Oignons', 'Charbon', 'Transport', 'Glace', 'Salaires', 'Divers'];
+  const expenseCategories = ['Eau', 'Tomates', 'Cube', 'Maggi', 'Piment', 'Huile', 'Oignons', 'Charbon', 'Transport', 'Glace', 'Salaires', 'Pertes', 'Divers'];
   const expenseDataPie = expenseCategories.map(cat => {
     const catExpenses = expenses.filter(e => e.category === cat);
     const total = catExpenses.reduce((acc, e) => acc + e.amount, 0);
@@ -398,7 +397,7 @@ export default function DashboardPage() {
           <motion.div variants={itemVariants} className="bg-slate-900 border border-slate-850 p-5 rounded-3xl relative overflow-hidden flex flex-col justify-between min-h-[120px] bg-gradient-to-br from-slate-900 to-emerald-950/20">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-bold text-emerald-450 uppercase tracking-wider">Bénéfice Net (Jour)</p>
+                <p className="text-xs font-bold text-emerald-450 uppercase tracking-wider">Bénéfice Net en Cours (Jour)</p>
                 <h2 className={`text-2xl font-black mt-2 truncate ${netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {formatFCFA(netProfit)}
                 </h2>
@@ -408,7 +407,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-[10px] text-emerald-450/80 font-medium mt-3">
-              Calculé : Ventes - Dépenses - Pertes
+              Calculé : Stock + Caisse - Dépenses - Salaires - Pertes - Dettes
             </div>
           </motion.div>
         ) : (
