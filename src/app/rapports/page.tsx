@@ -122,9 +122,9 @@ export default function RapportsPage() {
 
   // Calculate stats
   const totalSales = filteredSales.reduce((acc, s) => acc + s.totalAmount, 0);
-  const totalExpenses = filteredExpensesRaw.filter(e => e.category !== 'Salaires').reduce((acc, e) => acc + e.amount, 0);
+  const totalExpenses = filteredExpensesRaw.filter(e => e.category !== 'Salaires' && e.category !== 'Pertes').reduce((acc, e) => acc + e.amount, 0);
   const totalSalaries = filteredExpensesRaw.filter(e => e.category === 'Salaires').reduce((acc, e) => acc + e.amount, 0);
-  const totalLosses = filteredOutputs.reduce((acc, o) => acc + o.totalAmount, 0);
+  const totalLosses = filteredExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
   const totalDebts = filteredDebts.reduce((acc, d) => acc + d.remainingAmount, 0);
 
   // Valuation of inventory
@@ -281,7 +281,7 @@ export default function RapportsPage() {
 
             {/* Pertes */}
             <tr className="hover:bg-slate-850/20 transition-colors">
-              <td className="py-4 px-6 font-medium">Pertes de Stock (Avaries, casses, vols)</td>
+              <td className="py-4 px-6 font-medium">Pertes (Avaries, vols, etc.)</td>
               <td className="py-4 px-6 text-right font-extrabold text-rose-455">-{formatFCFA(totalLosses)}</td>
             </tr>
 

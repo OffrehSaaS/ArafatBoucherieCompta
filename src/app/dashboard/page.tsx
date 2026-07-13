@@ -131,11 +131,14 @@ export default function DashboardPage() {
   // Selected Date's Losses (Pertes déclarées)
   const dailyLosses = todayExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
 
-  // Current Caisse endingCash
+  // Current Caisse endingCash & startingCash
   const registries = cashRegistries.filter(r => r.date === filterDateStr);
   const caisseActuelle = registries.length > 0 
     ? registries[0].endingCash 
     : (cashRegistries.length > 0 ? [...cashRegistries].sort((a,b) => b.date.localeCompare(a.date))[0].endingCash : 150000);
+  const startingCash = registries.length > 0
+    ? registries[0].startingCash
+    : (cashRegistries.length > 0 ? [...cashRegistries].sort((a,b) => b.date.localeCompare(a.date))[0].startingCash : 150000);
 
   // Stock values
   const totalStockValue = products.reduce((acc, p) => acc + (p.quantity * p.unitPrice), 0);
@@ -145,8 +148,8 @@ export default function DashboardPage() {
   const totalRemainingDebts = debts.reduce((acc, d) => acc + d.remainingAmount, 0);
 
   // Net Profit (Admin only)
-  // net_profit = Stock + Caisse - Expenses - Salaries - Losses - Debts
-  const netProfit = totalStockValue + caisseActuelle - dailyExpenses - dailySalaries - dailyLosses - totalRemainingDebts;
+  // net_profit = Stock + Starting Cash + Sales - Expenses - Salaries - Losses - Debts
+  const netProfit = totalStockValue + startingCash + dailyCA - dailyExpenses - dailySalaries - dailyLosses - totalRemainingDebts;
 
   // Active employees on the selected date
   const jsDay = new Date(filterDateStr).getDay(); // 0 is Sunday, 1 is Monday...
@@ -407,7 +410,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-[10px] text-emerald-450/80 font-medium mt-3">
-              Calculé : Stock + Caisse - Dépenses - Salaires - Pertes - Dettes
+              Calculé : Stock + Caisse Départ + Ventes - Dépenses - Salaires - Pertes - Dettes
             </div>
           </motion.div>
         ) : (
