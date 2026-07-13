@@ -486,13 +486,22 @@ export default function StockPage() {
                         <td className="py-4 px-6 italic text-slate-500 font-light truncate max-w-xs">{prod.observations || '-'}</td>
                         {isAdmin && (
                           <td className="py-4 px-6 text-center">
-                            <button
-                              onClick={() => openEditModal(prod)}
-                              className="p-2 bg-slate-800 hover:bg-slate-700 text-emerald-450 rounded-xl transition-colors cursor-pointer"
-                              title="Modifier Stock Initial / Prix"
-                            >
-                              <Edit3 size={14} />
-                            </button>
+                            <div className="flex justify-center space-x-2">
+                              <button
+                                onClick={() => openEditModal(prod)}
+                                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-450 rounded-lg transition-colors cursor-pointer"
+                                title="Modifier Stock Initial / Prix"
+                              >
+                                <Edit3 size={13} />
+                              </button>
+                              <button
+                                onClick={() => triggerDeleteProduct(prod.id)}
+                                className="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded-lg transition-colors cursor-pointer"
+                                title="Supprimer du catalogue"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
