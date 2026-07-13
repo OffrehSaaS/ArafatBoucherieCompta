@@ -29,22 +29,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const router = useRouter();
 
   useEffect(() => {
-    // Load session from localStorage
-    const savedUser = window.localStorage.getItem('boucherie_user');
-    const savedRole = LocalDbStore.getCurrentUserRole();
+    const initializeAuth = async () => {
+      // Load session from localStorage
+      const savedUser = window.localStorage.getItem('boucherie_user');
+      const savedRole = LocalDbStore.getCurrentUserRole();
 
-    if (savedUser) {
-      const parsed = JSON.parse(savedUser) as User;
-      setUser({ ...parsed, role: savedRole });
-      
-      // Perform background sync from Supabase if configured
-      if (isSupabaseConfigured()) {
-        LocalDbStore.syncFromSupabase().catch(err => {
-          console.error('Background sync failed:', err);
-        });
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser) as User;
+        setUser({ ...parsed, role: savedRole });
+        
+        // Perform background sync from Supabase if configured and wait for it to complete
+        if (isSupabaseConfigured()) {
+          try {
+            await LocalDbStore.syncFromSupabase();
+          } catch (err) {
+            console.error('Initial database sync failed:', err);
+          }
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (email: string, passwordPlain: string): Promise<{ success: boolean; message?: string }> => {
