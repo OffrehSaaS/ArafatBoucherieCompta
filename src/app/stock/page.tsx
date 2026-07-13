@@ -990,7 +990,7 @@ export default function StockPage() {
                     <input
                       type="number"
                       required
-                      disabled={!!editingProduct} // seller cannot modify quantities directly, only via Entry/Output movements
+                      disabled={!!editingProduct && !isAdmin} // admin can modify initial quantity directly, seller cannot
                       min={0}
                       value={quantity || ''}
                       onChange={e => setQuantity(Number(e.target.value))}
