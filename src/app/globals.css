@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc; /* light page background */
+  --foreground: #0f172a; /* slate-900 */
+  --slate-950: #f1f5f9;  /* slate-100 - inputs, page container background */
+  --slate-900: #ffffff;  /* white - card background, sidebar background */
+  --slate-850: #e2e8f0;  /* slate-200 - border and divider lines */
+  --slate-800: #cbd5e1;  /* slate-300 - hover borders */
+  --slate-700: #94a3b8;  /* slate-400 - text placeholders */
+  --slate-650: #64748b;
+  --slate-600: #475569;
+  --slate-550: #475569;  /* slate-600 - Date & Heure text */
+  --slate-500: #475569;  /* slate-600 - muted text */
+  --slate-455: #334155;  /* slate-800 - Recorded by text */
+  --slate-450: #334155;
+  --slate-400: #334155;  /* slate-800 - main body text */
+  --slate-350: #1e293b;  /* slate-800 - table body text */
+  --slate-300: #0f172a;  /* slate-900 - highlights */
+  --text-white: #0f172a; /* slate-900 - titles and headings */
+  --rose-455: #b91c1c;   /* red-700 */
+  --rose-450: #dc2626;   /* red-600 */
+  --emerald-455: #047857; /* green-700 */
+  --emerald-450: #059669; /* green-600 */
+}
+
+.dark {
+  --background: #020617; /* dark page background */
+  --foreground: #f8fafc; /* slate-50 */
+  --slate-950: #020617;
+  --slate-900: #0f172a;
+  --slate-850: #1e293b;
+  --slate-800: #334155;
+  --slate-700: #475569;
+  --slate-650: #475569;
+  --slate-550: #94a3b8;  /* slate-400 */
+  --slate-600: #64748b;
+  --slate-500: #94a3b8;
+  --slate-455: #cbd5e1;  /* slate-300 */
+  --slate-450: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-350: #cbd5e1;
+  --slate-300: #e2e8f0;
+  --text-white: #ffffff;
+  --rose-455: #f43f5e;   /* rose-500 */
+  --rose-450: #fda4af;   /* rose-300 */
+  --emerald-455: #34d399; /* emerald-400 */
+  --emerald-450: #6ee7b7; /* emerald-300 */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-slate-950: var(--slate-950);
+  --color-slate-900: var(--slate-900);
+  --color-slate-850: var(--slate-850);
+  --color-slate-800: var(--slate-800);
+  --color-slate-700: var(--slate-700);
+  --color-slate-650: var(--slate-650);
+  --color-slate-600: var(--slate-600);
+  --color-slate-550: var(--slate-550);
+  --color-slate-500: var(--slate-500);
+  --color-slate-455: var(--slate-455);
+  --color-slate-450: var(--slate-450);
+  --color-slate-400: var(--slate-400);
+  --color-slate-350: var(--slate-350);
+  --color-slate-300: var(--slate-300);
+  
+  --color-rose-455: var(--rose-455);
+  --color-rose-450: var(--rose-450);
+  --color-emerald-455: var(--emerald-455);
+  --color-emerald-450: var(--emerald-450);
+  
+  --color-pure-white: #ffffff;
+  --color-pure-black: #000000;
+  
+  --color-white: var(--text-white);
+  
+  --font-sans: var(--font-geist-sans), sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--slate-850);
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Print utilities */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  aside, header, button, select, input, .print\:hidden {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+  .print\:block {
+    display: block !important;
+  }
+}
