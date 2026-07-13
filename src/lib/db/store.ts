@@ -1415,6 +1415,43 @@ export class LocalDbStore {
     return newPayment;
   }
 
+  static updateDebt(id: string, updates: Partial<Debt>, userName: string): Debt {
+    const debts = this.getDebts();
+    const index = debts.findIndex(d => d.id === id);
+    if (index === -1) throw new Error('Dette non trouvée');
+
+    const original = debts[index];
+    const updatedDebt = {
+      ...original,
+      ...updates
+    };
+
+    // Recalculate remaining amount and status
+    updatedDebt.remainingAmount = updatedDebt.totalAmount - updatedDebt.paidAmount;
+    updatedDebt.status = updatedDebt.paidAmount === 0 
+      ? 'En attente' 
+      : (updatedDebt.paidAmount >= updatedDebt.totalAmount ? 'Payée' : 'Partiellement payée');
+
+    debts[index] = updatedDebt;
+    setLocalStorageData('boucherie_debts', debts);
+    this.syncToSupabase('debts', 'update', updatedDebt);
+
+    this.addActivityLog('Modification Dette', `Dette de ${updatedDebt.supplierName} modifiée : ${updatedDebt.totalAmount} FCFA.`, userName);
+    return updatedDebt;
+  }
+
+  static deleteDebt(id: string, userName: string) {
+    const debts = this.getDebts();
+    const debt = debts.find(d => d.id === id);
+    if (!debt) throw new Error('Dette non trouvée');
+
+    const updated = debts.filter(d => d.id !== id);
+    setLocalStorageData('boucherie_debts', updated);
+    this.syncToSupabase('debts', 'delete', { id });
+
+    this.addActivityLog('Suppression Dette', `Dette de ${debt.supplierName} de ${debt.totalAmount} FCFA supprimée.`, userName);
+  }
+
   // 7. Employees
   static addEmployee(employee: Omit<Employee, 'id' | 'createdAt'>, userName: string): Employee {
     const employees = this.getEmployees();

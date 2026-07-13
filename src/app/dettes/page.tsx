@@ -19,8 +19,11 @@ import {
   History,
   Lock,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Edit3,
+  Trash2
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function DettesPage() {
   const { user } = useAuth();
@@ -39,6 +42,9 @@ export default function DettesPage() {
   const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [debtToDeleteId, setDebtToDeleteId] = useState('');
 
   // New Debt Form
   const [supplierId, setSupplierId] = useState('');
@@ -81,6 +87,7 @@ export default function DettesPage() {
   }
 
   const handleOpenDebtModal = () => {
+    setEditingDebt(null);
     const sups = LocalDbStore.getSuppliers();
     setSuppliers(sups);
     if (sups.length > 0) {
@@ -92,6 +99,32 @@ export default function DettesPage() {
     setDueDate('');
     setDebtError('');
     setIsDebtModalOpen(true);
+  };
+
+  const handleOpenEditDebtModal = (debt: Debt) => {
+    setEditingDebt(debt);
+    const sups = LocalDbStore.getSuppliers();
+    setSuppliers(sups);
+    setSupplierId(debt.supplierId);
+    setTotalAmount(debt.totalAmount);
+    setDueDate(debt.dueDate ? debt.dueDate.split('T')[0] : '');
+    setDebtError('');
+    setIsDebtModalOpen(true);
+  };
+
+  const triggerDeleteDebt = (id: string) => {
+    setDebtToDeleteId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteDebt = () => {
+    try {
+      LocalDbStore.deleteDebt(debtToDeleteId, user?.fullName || 'Administrateur');
+      setIsDeleteDialogOpen(false);
+      loadData();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleOpenPaymentModal = (debt: Debt) => {
@@ -115,12 +148,22 @@ export default function DettesPage() {
     }
 
     try {
-      LocalDbStore.addDebt({
+      const payload = {
         supplierId,
         totalAmount,
-        paidAmount: 0,
         dueDate: dueDate || undefined
-      }, user?.fullName || 'Administrateur');
+      };
+
+      const userName = user?.fullName || 'Administrateur';
+
+      if (editingDebt) {
+        LocalDbStore.updateDebt(editingDebt.id, payload, userName);
+      } else {
+        LocalDbStore.addDebt({
+          ...payload,
+          paidAmount: 0
+        }, userName);
+      }
 
       setIsDebtModalOpen(false);
       loadData();
@@ -294,16 +337,33 @@ export default function DettesPage() {
                           </span>
                         </td>
                         <td className="py-4 px-6 text-center">
-                          {debt.status !== 'Payée' ? (
+                          <div className="flex justify-center items-center space-x-2">
+                            {debt.status !== 'Payée' ? (
+                              <button
+                                onClick={() => handleOpenPaymentModal(debt)}
+                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-450 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                                title="Verser un acompte"
+                              >
+                                Verser
+                              </button>
+                            ) : (
+                              <span className="text-emerald-400 bg-emerald-500/10 px-2.5 py-1.5 rounded-lg text-[10px] font-bold">Soldée</span>
+                            )}
                             <button
-                              onClick={() => handleOpenPaymentModal(debt)}
-                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer"
+                              onClick={() => handleOpenEditDebtModal(debt)}
+                              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-450 rounded-lg transition-colors cursor-pointer"
+                              title="Modifier la dette"
                             >
-                              Verser
+                              <Edit3 size={13} />
                             </button>
-                          ) : (
-                            <span className="text-slate-500 italic text-[10px]">Soldée</span>
-                          )}
+                            <button
+                              onClick={() => triggerDeleteDebt(debt.id)}
+                              className="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded-lg transition-colors cursor-pointer"
+                              title="Supprimer la dette"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
 
@@ -387,7 +447,7 @@ export default function DettesPage() {
               <div className="flex items-center justify-between pb-4 border-b border-slate-850">
                 <h3 className="text-lg font-extrabold text-white flex items-center">
                   <Sparkles className="text-amber-500 mr-2 h-5 w-5" />
-                  Enregistrer une Dette
+                  {editingDebt ? 'Modifier la Dette' : 'Enregistrer une Dette'}
                 </h3>
                 <button
                   onClick={() => setIsDebtModalOpen(false)}
@@ -459,7 +519,7 @@ export default function DettesPage() {
                     type="submit"
                     className="w-1/2 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-bold text-xs transition-colors cursor-pointer"
                   >
-                    Enregistrer
+                    {editingDebt ? 'Enregistrer les Modifications' : 'Enregistrer'}
                   </button>
                 </div>
               </form>
@@ -568,6 +628,14 @@ export default function DettesPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        title="Supprimer la dette"
+        message="Êtes-vous sûr de vouloir supprimer cette dette ? Cette action est irréversible."
+        onConfirm={handleConfirmDeleteDebt}
+        onCancel={() => setIsDeleteDialogOpen(false)}
+      />
     </div>
   );
 }
