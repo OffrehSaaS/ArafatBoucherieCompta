@@ -72,9 +72,34 @@ export default function StockPage() {
   const [category, setCategory] = useState('');
   const [unitPrice, setUnitPrice] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(0);
+  const [totalValue, setTotalValue] = useState<number>(0);
   const [supplierId, setSupplierId] = useState('');
   const [observations, setObservations] = useState('');
   const [productDate, setProductDate] = useState('');
+
+  // Helper functions for bi-directional calculations
+  const updateUnitPrice = (val: number) => {
+    setUnitPrice(val);
+    if (val > 0 && totalValue > 0) {
+      setQuantity(Math.round(totalValue / val));
+    } else if (val > 0 && quantity > 0) {
+      setTotalValue(quantity * val);
+    }
+  };
+
+  const updateQuantity = (val: number) => {
+    setQuantity(val);
+    if (unitPrice > 0) {
+      setTotalValue(val * unitPrice);
+    }
+  };
+
+  const updateTotalValue = (val: number) => {
+    setTotalValue(val);
+    if (unitPrice > 0) {
+      setQuantity(Math.round(val / unitPrice));
+    }
+  };
 
   // Date Filters
   const [startDateFilter, setStartDateFilter] = useState('');
@@ -115,6 +140,7 @@ export default function StockPage() {
     }
     setUnitPrice(0);
     setQuantity(0);
+    setTotalValue(0);
     if (suppliers.length > 0) {
       setSupplierId(suppliers[0].id);
     }
@@ -131,6 +157,7 @@ export default function StockPage() {
     setCategory(product.category);
     setUnitPrice(product.unitPrice);
     setQuantity(product.quantity);
+    setTotalValue(product.quantity * product.unitPrice);
     setSupplierId(product.supplierId);
     setObservations(product.observations);
     setProductDate(product.createdAt ? product.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]);
@@ -972,7 +999,7 @@ export default function StockPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Prix Unitaire (FCFA)</label>
                     <input
@@ -980,8 +1007,20 @@ export default function StockPage() {
                       required
                       min={0}
                       value={unitPrice || ''}
-                      onChange={e => setUnitPrice(Number(e.target.value))}
+                      onChange={e => updateUnitPrice(Number(e.target.value))}
                       placeholder="Ex: 3500"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Valeur Totale (FCFA)</label>
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      value={totalValue || ''}
+                      onChange={e => updateTotalValue(Number(e.target.value))}
+                      placeholder="Ex: 60000"
                       className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -993,7 +1032,7 @@ export default function StockPage() {
                       disabled={!!editingProduct && !isAdmin} // admin can modify initial quantity directly, seller cannot
                       min={0}
                       value={quantity || ''}
-                      onChange={e => setQuantity(Number(e.target.value))}
+                      onChange={e => updateQuantity(Number(e.target.value))}
                       placeholder="Ex: 100"
                       className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50"
                     />
@@ -1001,7 +1040,7 @@ export default function StockPage() {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Observations</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Observations <span className="text-slate-500 normal-case font-normal">(Facultatif)</span></label>
                   <textarea
                     value={observations}
                     onChange={e => setObservations(e.target.value)}
