@@ -25,6 +25,14 @@ export const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [user, isLoading, isPublicPage, pathname, router]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => console.log('Service Worker registered successfully:', reg.scope))
+        .catch((err) => console.error('Service Worker registration failed:', err));
+    }
+  }, []);
+
   // Wait for loading to finish to prevent flash of content
   if (isLoading) {
     return (

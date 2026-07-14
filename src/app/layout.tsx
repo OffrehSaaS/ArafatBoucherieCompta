@@ -27,6 +27,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className="h-full">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#059669" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} h-full antialiased bg-slate-950 text-slate-400 font-sans`}>
         <AuthProvider>
           <ThemeProvider>
