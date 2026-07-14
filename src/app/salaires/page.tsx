@@ -239,7 +239,7 @@ export default function SalairesPage() {
       <div className="bg-slate-900/60 border border-slate-850 p-4 rounded-2xl flex items-start space-x-3">
         <Info className="text-emerald-400 h-5 w-5 mt-0.5 shrink-0" />
         <div className="text-xs space-y-1">
-          <p className="font-bold text-slate-200">Liaison de Dépenses Automatique</p>
+          <p className="font-bold text-slate-300">Liaison de Dépenses Automatique</p>
           <p className="text-slate-400 font-light leading-relaxed">
             Chaque versement de salaire journalier enregistré ici est **automatiquement** converti en dépense de caisse 
             sous la catégorie **"Salaires"** pour la journée concernée. Le solde du tiroir-caisse sera mis à jour en temps réel.
@@ -277,10 +277,10 @@ export default function SalairesPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="bg-rose-955/20 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-250 backdrop-blur-md mb-4"
+            className="bg-rose-500/10 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-450 backdrop-blur-md mb-4"
           >
             <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-sm text-rose-350">{selectedIds.length}</span>
+              <span className="font-extrabold text-sm text-rose-450">{selectedIds.length}</span>
               <span className="text-slate-455 font-medium">paiement(s) de salaire sélectionné(s) pour suppression</span>
             </div>
             <button

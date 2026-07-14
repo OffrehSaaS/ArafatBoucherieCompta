@@ -126,7 +126,7 @@ export default function CaissePage() {
       <div className="bg-slate-900/60 border border-slate-850 p-4 rounded-2xl flex items-start space-x-3">
         <Info className="text-emerald-450 h-5 w-5 mt-0.5 shrink-0" />
         <div className="text-xs space-y-1">
-          <p className="font-bold text-slate-200">Fonctionnement du Tiroir Caisse</p>
+          <p className="font-bold text-slate-300">Fonctionnement du Tiroir Caisse</p>
           <p className="text-slate-400 font-light leading-relaxed">
             La formule de clôture est calculée automatiquement : 
             **Caisse Finale = Caisse de Départ + Ventes Totales - Dépenses Totales - Salaires Payés**. 

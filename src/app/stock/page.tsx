@@ -564,11 +564,11 @@ export default function StockPage() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="bg-rose-955/20 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-250 backdrop-blur-md mb-4"
+                className="bg-rose-500/10 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-450 backdrop-blur-md mb-4"
               >
                 <div className="flex items-center space-x-2">
-                  <span className="font-extrabold text-sm text-rose-350">{selectedIds.length}</span>
-                  <span className="text-slate-450 font-medium">produit(s) sélectionné(s) pour suppression</span>
+                  <span className="font-extrabold text-sm text-rose-450">{selectedIds.length}</span>
+                  <span className="text-slate-455 font-medium">produit(s) sélectionné(s) pour suppression</span>
                 </div>
                 <button
                   onClick={handleDeleteSelected}
@@ -705,7 +705,7 @@ export default function StockPage() {
                   setStartDateFilter('');
                   setEndDateFilter('');
                 }}
-                className="text-[10px] text-rose-400 hover:text-rose-350 font-bold uppercase tracking-wider bg-rose-500/10 px-2.5 py-1.5 rounded-lg border border-rose-500/20 cursor-pointer"
+                className="text-[10px] text-rose-455 hover:text-rose-450 font-bold uppercase tracking-wider bg-rose-500/10 px-2.5 py-1.5 rounded-lg border border-rose-500/20 cursor-pointer"
               >
                 Réinitialiser
               </button>

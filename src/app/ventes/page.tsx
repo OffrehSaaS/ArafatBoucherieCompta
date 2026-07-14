@@ -306,7 +306,7 @@ export default function VentesPage() {
               setStartDateFilter('');
               setEndDateFilter('');
             }}
-            className="lg:col-span-2 py-2 bg-slate-850 hover:bg-slate-800 text-rose-455 hover:text-rose-350 border border-slate-800 rounded-xl font-bold text-xs cursor-pointer transition-colors text-center"
+            className="lg:col-span-2 py-2 bg-slate-850 hover:bg-slate-800 text-rose-455 hover:text-rose-450 border border-slate-800 rounded-xl font-bold text-xs cursor-pointer transition-colors text-center"
           >
             Reset
           </button>
@@ -341,10 +341,10 @@ export default function VentesPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="bg-rose-955/20 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-250 backdrop-blur-md mb-4"
+            className="bg-rose-500/10 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-450 backdrop-blur-md mb-4"
           >
             <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-sm text-rose-350">{selectedIds.length}</span>
+              <span className="font-extrabold text-sm text-rose-450">{selectedIds.length}</span>
               <span className="text-slate-455 font-medium">vente(s) sélectionnée(s) pour suppression</span>
             </div>
             <button

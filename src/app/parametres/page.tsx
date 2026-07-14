@@ -466,7 +466,7 @@ export default function ParametresPage() {
           </div>
 
           <div className="p-4 bg-rose-950/20 border border-rose-900/30 rounded-2xl text-xs space-y-1">
-            <h4 className="font-bold text-rose-350">Réinitialisation Complète des Données</h4>
+            <h4 className="font-bold text-rose-450">Réinitialisation Complète des Données</h4>
             <p className="text-slate-400 font-light leading-relaxed">
               Supprime tous les enregistrements locaux (historiques, fiches de paie, stocks, ventes, dépenses) et rétablit les paramètres d'usine.
             </p>

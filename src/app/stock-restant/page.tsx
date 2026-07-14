@@ -232,7 +232,7 @@ export default function StockRestantPage() {
       <div className="bg-slate-900/60 border border-slate-850 p-4 rounded-2xl flex items-start space-x-3 print:hidden">
         <Info className="text-emerald-400 h-5 w-5 mt-0.5 shrink-0" />
         <div className="text-xs space-y-1">
-          <p className="font-bold text-slate-200">Retour Automatique & Calcul de Ventes</p>
+          <p className="font-bold text-slate-300">Retour Automatique & Calcul de Ventes</p>
           <p className="text-slate-400 font-light leading-relaxed">
             La saisie du stock restant rajoute automatiquement la marchandise calculée dans le **Stock au Frigo**. Le système fait également la différence avec les sorties du matin pour générer automatiquement la vente correspondante dans le registre.
           </p>
@@ -301,7 +301,7 @@ export default function StockRestantPage() {
                 setStartDateFilter('');
                 setEndDateFilter('');
               }}
-              className="w-full py-2 bg-slate-850 hover:bg-slate-800 text-rose-455 hover:text-rose-350 border border-slate-800 rounded-xl font-bold text-xs cursor-pointer transition-colors text-center"
+              className="w-full py-2 bg-slate-850 hover:bg-slate-800 text-rose-455 hover:text-rose-450 border border-slate-800 rounded-xl font-bold text-xs cursor-pointer transition-colors text-center"
             >
               Reset
             </button>
@@ -316,10 +316,10 @@ export default function StockRestantPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="bg-rose-955/20 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-250 backdrop-blur-md mb-4 print:hidden"
+            className="bg-rose-500/10 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-450 backdrop-blur-md mb-4 print:hidden"
           >
             <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-sm text-rose-350">{selectedIds.length}</span>
+              <span className="font-extrabold text-sm text-rose-450">{selectedIds.length}</span>
               <span className="text-slate-455 font-medium">saisie(s) de stock restant sélectionnée(s) pour suppression</span>
             </div>
             <button

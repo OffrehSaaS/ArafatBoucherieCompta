@@ -168,7 +168,7 @@ export default function LandingPage() {
                 <motion.button 
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  className="w-full py-3.5 bg-slate-850 hover:bg-slate-800 border border-slate-800 text-slate-200 hover:text-white rounded-2xl font-bold text-xs flex items-center justify-center space-x-2 transition-colors cursor-pointer"
+                  className="w-full py-3.5 bg-slate-850 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-2xl font-bold text-xs flex items-center justify-center space-x-2 transition-colors cursor-pointer"
                 >
                   <span>Créer un compte</span>
                   <ArrowUpRight size={14} className="opacity-60" />
