@@ -74,7 +74,11 @@ export default function ResetPasswordPage() {
         setStep('password');
       }
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue.');
+      if (err.message === 'email rate limit exceeded') {
+        setError("La limite d'envoi d'e-mails de Supabase a été dépassée. Veuillez patienter quelques minutes avant de réessayer, ou configurez un service SMTP personnalisé dans votre console Supabase.");
+      } else {
+        setError(err.message || 'Une erreur est survenue.');
+      }
     } finally {
       setLoading(false);
     }

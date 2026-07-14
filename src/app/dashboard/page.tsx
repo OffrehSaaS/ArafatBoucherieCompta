@@ -61,16 +61,21 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
     setSelectedDate(new Date().toISOString().split('T')[0]);
-    setProducts(LocalDbStore.getProducts());
-    setSales(LocalDbStore.getSales());
-    setExpenses(LocalDbStore.getExpenses());
-    setOutputs(LocalDbStore.getOutputs());
-    setDebts(LocalDbStore.getDebts());
-    setEmployees(LocalDbStore.getEmployees());
-    setCashRegistries(LocalDbStore.getCashRegistries());
-    setActivityLogs(LocalDbStore.getActivityLogs());
-    setAccounts(LocalDbStore.getAccounts());
-    setStockRestants(LocalDbStore.getStockRestants());
+    
+    const loadLocal = () => {
+      setProducts(LocalDbStore.getProducts());
+      setSales(LocalDbStore.getSales());
+      setExpenses(LocalDbStore.getExpenses());
+      setOutputs(LocalDbStore.getOutputs());
+      setDebts(LocalDbStore.getDebts());
+      setEmployees(LocalDbStore.getEmployees());
+      setCashRegistries(LocalDbStore.getCashRegistries());
+      setActivityLogs(LocalDbStore.getActivityLogs());
+      setAccounts(LocalDbStore.getAccounts());
+      setStockRestants(LocalDbStore.getStockRestants());
+    };
+
+    loadLocal();
 
     if (typeof window !== 'undefined') {
       const name = window.localStorage.getItem('boucherie_name');
@@ -78,6 +83,15 @@ export default function DashboardPage() {
       if (name) setButcheryName(name);
       if (goal) setDailyTarget(Number(goal));
     }
+
+    // Sync from Supabase in the background and reload
+    LocalDbStore.syncFromSupabase()
+      .then(() => {
+        loadLocal();
+      })
+      .catch(err => {
+        console.error("Dashboard mount sync error:", err);
+      });
   }, []);
 
   const handleApproveAccount = (accountId: string) => {

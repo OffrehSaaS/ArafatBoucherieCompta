@@ -111,7 +111,11 @@ export default function RegisterPage() {
 
       setRegisteredPending(true);
     } catch (err: any) {
-      setError(err.message || "Erreur lors de la création du compte. L'adresse email est peut-être déjà prise.");
+      if (err.message === 'email rate limit exceeded') {
+        setError("La limite d'envoi d'e-mails de Supabase a été dépassée. Veuillez désactiver la confirmation par e-mail dans les paramètres de votre console Supabase (Authentication -> Providers -> Email -> décochez 'Confirm Email') ou patienter quelques minutes.");
+      } else {
+        setError(err.message || "Erreur lors de la création du compte. L'adresse email est peut-être déjà prise.");
+      }
     } finally {
       setLoading(false);
     }
