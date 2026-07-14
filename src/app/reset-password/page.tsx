@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LocalDbStore } from '@/lib/db/store';
 import { motion } from 'framer-motion';
+import { supabase, isSupabaseConfigured } from '@/lib/db/client';
 import { 
   Boxes, 
   Mail, 
@@ -33,26 +34,45 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
-  const handleRequestReset = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('step') === 'password' || window.location.hash.includes('type=recovery')) {
+        setStep('password');
+        setInfoMsg("Session de récupération active. Saisissez votre nouveau mot de passe ci-dessous.");
+      }
+    }
+  }, []);
+
+  const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setInfoMsg('');
     setLoading(true);
 
     try {
-      const accounts = LocalDbStore.getAccounts();
-      const account = accounts.find(acc => acc.email.toLowerCase() === email.toLowerCase());
+      if (isSupabaseConfigured() && supabase) {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password?step=password`,
+        });
+        if (resetError) {
+          throw new Error(resetError.message);
+        }
+        setEmailSent(true);
+      } else {
+        const accounts = LocalDbStore.getAccounts();
+        const account = accounts.find(acc => acc.email.toLowerCase() === email.toLowerCase());
 
-      if (!account) {
-        throw new Error("Cette adresse e-mail ne correspond à aucun compte enregistré.");
+        if (!account) {
+          throw new Error("Cette adresse e-mail ne correspond à aucun compte enregistré.");
+        }
+
+        setTargetAccountId(account.id);
+        setInfoMsg("Un lien de réinitialisation a été généré pour la démo. Cliquez sur 'Continuer' pour définir le nouveau mot de passe.");
+        setStep('password');
       }
-
-      setTargetAccountId(account.id);
-      
-      // Simulate sending link
-      setInfoMsg("Un lien de réinitialisation a été généré pour la démo. Cliquez sur 'Continuer la démo' pour définir le nouveau mot de passe.");
-      setStep('password');
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue.');
     } finally {
@@ -60,7 +80,7 @@ export default function ResetPasswordPage() {
     }
   };
 
-  const handleUpdatePassword = (e: React.FormEvent) => {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -78,7 +98,25 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      LocalDbStore.resetAccountPassword(targetAccountId, password, 'Utilisateur');
+      if (isSupabaseConfigured() && supabase) {
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: password
+        });
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const accounts = LocalDbStore.getAccounts();
+          const index = accounts.findIndex(acc => acc.email.toLowerCase() === authUser.email?.toLowerCase());
+          if (index !== -1) {
+            accounts[index].password = password;
+            window.localStorage.setItem('boucherie_accounts', JSON.stringify(accounts));
+          }
+        }
+      } else {
+        LocalDbStore.resetAccountPassword(targetAccountId, password, 'Utilisateur');
+      }
       setStep('success');
       
       // Redirect to login after 3 seconds
@@ -117,44 +155,69 @@ export default function ResetPasswordPage() {
         {/* STEP 1: ENTER EMAIL */}
         {step === 'email' && (
           <>
-            <div className="text-center space-y-1.5">
-              <h2 className="text-2xl font-black text-white">Réinitialisation</h2>
-              <p className="text-xs text-slate-500">Saisissez votre e-mail pour recevoir le lien de réinitialisation.</p>
-            </div>
+            {emailSent ? (
+              <div className="text-center space-y-6 py-4 animate-scaleUp">
+                <div className="w-16 h-16 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                  <CheckCircle size={32} />
+                </div>
 
-            {error && (
-              <div className="p-3.5 bg-rose-950/40 border border-rose-900/60 rounded-xl text-rose-200 text-xs flex items-center space-x-2">
-                <Info size={16} className="text-rose-455 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
+                <div className="space-y-2">
+                  <h2 className="text-xl font-extrabold text-white">E-mail envoyé !</h2>
+                  <p className="text-xs text-slate-400 leading-relaxed font-light">
+                    Un e-mail de réinitialisation contenant un lien sécurisé a été envoyé à <strong>{email}</strong>. Veuillez ouvrir ce message pour changer votre mot de passe.
+                  </p>
+                </div>
 
-            <form onSubmit={handleRequestReset} className="space-y-4">
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Votre Adresse Email</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
-                    <Mail size={16} />
-                  </span>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="nom@boucherie.com"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-655 text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  />
+                <div className="pt-2">
+                  <Link href="/login" className="block w-full">
+                    <button className="w-full py-3 bg-slate-850 hover:bg-slate-800 text-slate-350 hover:text-white rounded-xl text-xs font-bold transition-colors cursor-pointer">
+                      Retourner à la page de connexion
+                    </button>
+                  </Link>
                 </div>
               </div>
+            ) : (
+              <>
+                <div className="text-center space-y-1.5">
+                  <h2 className="text-2xl font-black text-white">Réinitialisation</h2>
+                  <p className="text-xs text-slate-500">Saisissez votre e-mail pour recevoir le lien de réinitialisation.</p>
+                </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-450 text-slate-950 font-bold rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {loading ? 'Recherche...' : "Envoyer le lien"}
-              </button>
-            </form>
+                {error && (
+                  <div className="p-3.5 bg-rose-950/40 border border-rose-900/60 rounded-xl text-rose-200 text-xs flex items-center space-x-2">
+                    <Info size={16} className="text-rose-455 flex-shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleRequestReset} className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Votre Adresse Email</label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
+                        <Mail size={16} />
+                      </span>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        placeholder="nom@boucherie.com"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-655 text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 bg-emerald-500 hover:bg-emerald-450 text-slate-950 font-bold rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {loading ? 'Recherche...' : "Envoyer le lien"}
+                  </button>
+                </form>
+              </>
+            )}
           </>
         )}
 

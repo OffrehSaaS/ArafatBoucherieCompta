@@ -77,7 +77,8 @@ export default function RegisterPage() {
             data: {
               full_name: fullName,
               phone: phone,
-              role: 'vendeur'
+              role: 'vendeur',
+              status: 'pending'
             }
           }
         });
@@ -87,10 +88,10 @@ export default function RegisterPage() {
         }
 
         if (signUpData.user) {
-          // Manually create the profile in profiles table
+          // Upsert the profile in profiles table (to avoid trigger key conflict)
           const { error: profileError } = await supabase
             .from('profiles')
-            .insert({
+            .upsert({
               id: signUpData.user.id,
               email,
               role: 'vendeur',
