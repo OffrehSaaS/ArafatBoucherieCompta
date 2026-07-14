@@ -51,6 +51,10 @@ export default function SortiesPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [outputToDeleteId, setOutputToDeleteId] = useState<string | null>(null);
 
+  // Batch delete states
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBatchConfirmOpen, setIsBatchConfirmOpen] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -58,6 +62,7 @@ export default function SortiesPage() {
   const loadData = () => {
     setProducts(LocalDbStore.getProducts());
     setOutputs(LocalDbStore.getOutputs().sort((a,b) => b.createdAt.localeCompare(a.createdAt)));
+    setSelectedIds([]);
   };
 
   const handleOpenModal = () => {
@@ -210,6 +215,38 @@ export default function SortiesPage() {
     }
   };
 
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredOutputs.map(o => o.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    setIsBatchConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteSelected = () => {
+    try {
+      const userName = user?.fullName || 'Utilisateur';
+      for (const id of selectedIds) {
+        LocalDbStore.deleteOutput(id, userName);
+      }
+      setSelectedIds([]);
+      setIsBatchConfirmOpen(false);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Une erreur est survenue.');
+    }
+  };
+
   // Filter outputs
   const filteredOutputs = outputs.filter(o => {
     const itemDate = o.createdAt.split('T')[0];
@@ -339,12 +376,43 @@ export default function SortiesPage() {
         </div>
       </div>
 
+      {/* Batch delete action bar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-rose-955/20 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-250 backdrop-blur-md mb-4"
+          >
+            <div className="flex items-center space-x-2">
+              <span className="font-extrabold text-sm text-rose-350">{selectedIds.length}</span>
+              <span className="text-slate-455 font-medium">sortie(s) de stock sélectionnée(s) pour suppression</span>
+            </div>
+            <button
+              onClick={handleDeleteSelected}
+              className="px-4 py-2.5 bg-rose-500 hover:bg-rose-455 text-white font-extrabold rounded-xl transition-colors cursor-pointer text-xs uppercase tracking-wider"
+            >
+              Supprimer la sélection
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Table Container */}
       <div className="bg-slate-900 border border-slate-850 rounded-3xl overflow-hidden animate-fadeIn">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/40">
+                <th className="py-4 px-6 w-10">
+                  <input
+                    type="checkbox"
+                    checked={filteredOutputs.length > 0 && selectedIds.length === filteredOutputs.length}
+                    onChange={handleSelectAll}
+                    className="rounded border-slate-850 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4"
+                  />
+                </th>
                 <th className="py-4 px-6">Date & Heure</th>
                 <th className="py-4 px-6">Produit</th>
                 <th className="py-4 px-6 text-center">Statut</th>
@@ -361,7 +429,15 @@ export default function SortiesPage() {
               {filteredOutputs.length > 0 ? (
                 filteredOutputs.map(out => (
                   <tr key={out.id} className="hover:bg-slate-850/30 transition-colors">
-                    <td className="py-4 px-6 text-slate-500">
+                    <td className="py-4 px-6 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(out.id)}
+                        onChange={() => handleSelectRow(out.id)}
+                        className="rounded border-slate-850 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4"
+                      />
+                    </td>
+                    <td className="py-4 px-6 text-slate-550">
                       {formatDate(out.createdAt)} · <span className="text-[10px]">{formatTime(out.createdAt)}</span>
                     </td>
                     <td className="py-4 px-6 font-bold text-white">{out.productName}</td>
@@ -419,7 +495,7 @@ export default function SortiesPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-500">
+                  <td colSpan={11} className="py-12 text-center text-slate-500">
                     <TrendingDown className="h-12 w-12 mx-auto mb-2 opacity-35 text-slate-400" />
                     <span>Aucune sortie de stock correspondant aux filtres.</span>
                   </td>
@@ -710,6 +786,18 @@ export default function SortiesPage() {
         cancelText="Conserver"
         onConfirm={handleConfirmDelete}
         onCancel={() => { setIsConfirmOpen(false); setOutputToDeleteId(null); }}
+      />
+
+      {/* Delete Selection Confirmation */}
+      <ConfirmDialog
+        isOpen={isBatchConfirmOpen}
+        title="Annuler les sorties sélectionnées"
+        message={`Voulez-vous vraiment annuler les ${selectedIds.length} sorties de stock sélectionnées ? Les pièces correspondantes seront restituées au frigo et les ventes déjà validées seront également annulées.`}
+        type="danger"
+        confirmText="Annuler les sorties"
+        cancelText="Conserver"
+        onConfirm={handleConfirmDeleteSelected}
+        onCancel={() => setIsBatchConfirmOpen(false)}
       />
     </div>
   );

@@ -374,7 +374,8 @@ export class LocalDbStore {
           supplierId: p.supplier_id || '',
           observations: p.observations || '',
           createdAt: p.created_at,
-          updatedAt: p.updated_at
+          updatedAt: p.updated_at,
+          active: p.active !== null ? p.active : true
         }));
         setLocalStorageData('boucherie_products', productsList);
       } else {
@@ -1264,6 +1265,7 @@ export class LocalDbStore {
     // 3. Remove the stock restant entry
     const updatedRestants = restants.filter(r => r.id !== id);
     setLocalStorageData('boucherie_stock_restant', updatedRestants);
+    this.syncToSupabase('stock_restant', 'delete', { id });
 
     this.addActivityLog('Suppression Stock Restant', `Enregistrement stock restant pour ${entry.productName} supprimé.`, userName);
     this.recalculateCaisseForDate(dateStr);
@@ -1521,6 +1523,7 @@ export class LocalDbStore {
 
     employees = employees.filter(e => e.id !== id);
     setLocalStorageData('boucherie_employees', employees);
+    this.syncToSupabase('employees', 'delete', { id });
     this.addActivityLog('Suppression Employé', `Employé ${employee.firstName} ${employee.lastName} supprimé.`, userName);
   }
 
@@ -1702,6 +1705,17 @@ export class LocalDbStore {
     this.syncToSupabase('cash_registry', 'upsert', targetReg);
     this.addActivityLog('Caisse Départ', `Caisse de départ du ${date} modifiée à ${amount} FCFA par l'admin.`, userName);
     this.recalculateCaisseForToday();
+  }
+
+  static deleteCashRegistry(id: string, userName: string) {
+    const registries = this.getCashRegistries();
+    const reg = registries.find(r => r.id === id);
+    if (!reg) throw new Error('Caisse introuvable.');
+
+    const updated = registries.filter(r => r.id !== id);
+    setLocalStorageData('boucherie_cash_registries', updated);
+    this.syncToSupabase('cash_registry', 'delete', { id });
+    this.addActivityLog('Suppression Caisse', `Clôture de caisse du ${reg.date} supprimée par ${userName}.`, userName);
   }
 
   static deleteProduct(id: string, userName: string) {

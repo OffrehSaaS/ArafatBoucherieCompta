@@ -5,10 +5,12 @@ import { useAuth } from '@/context/AuthContext';
 import { LocalDbStore, CashRegistry, Product, Debt, Expense } from '@/lib/db/store';
 import { formatFCFA, formatDate } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { 
   Wallet, 
   Plus, 
   Edit3, 
+  Trash2,
   Search, 
   X,
   Sparkles,
@@ -38,6 +40,10 @@ export default function CaissePage() {
   const [date, setDate] = useState('');
   const [startingCash, setStartingCash] = useState<number>(0);
   const [error, setError] = useState('');
+
+  // Delete State
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [caisseToDeleteId, setCaisseToDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -76,6 +82,25 @@ export default function CaissePage() {
       loadData();
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue.');
+    }
+  };
+
+  const handleDeleteCaisse = (id: string) => {
+    setCaisseToDeleteId(id);
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteCaisse = () => {
+    if (caisseToDeleteId) {
+      try {
+        LocalDbStore.deleteCashRegistry(caisseToDeleteId, user?.fullName || 'Utilisateur');
+        setIsConfirmOpen(false);
+        setCaisseToDeleteId(null);
+        // Refresh registries list
+        setRegistries(LocalDbStore.getCashRegistries().sort((a,b) => b.date.localeCompare(a.date)));
+      } catch (err: any) {
+        alert(err.message);
+      }
     }
   };
 
@@ -229,13 +254,20 @@ export default function CaissePage() {
 
               {/* Actions Footer (Admin only) */}
               {isAdmin && (
-                <div className="flex items-center justify-end border-t border-slate-850 mt-4 pt-3">
+                <div className="flex items-center justify-end space-x-2 border-t border-slate-850 mt-4 pt-3">
                   <button
                     onClick={() => handleOpenEditModal(reg)}
                     className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-emerald-400 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer"
                   >
                     <Edit3 size={12} />
                     <span>Modifier Caisse de Départ</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCaisse(reg.id)}
+                    className="flex items-center space-x-1.5 px-3 py-1.5 bg-rose-955/20 hover:bg-rose-900/40 text-rose-455 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer"
+                  >
+                    <Trash2 size={12} />
+                    <span>Supprimer</span>
                   </button>
                 </div>
               )}
@@ -332,6 +364,17 @@ export default function CaissePage() {
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        title="Supprimer la caisse"
+        message="Voulez-vous vraiment supprimer cet enregistrement de clôture de caisse ? Cette action supprimera l'historique de caisse pour cette journée (elle pourra être recalculée si des opérations sont modifiées)."
+        type="danger"
+        confirmText="Supprimer la caisse"
+        cancelText="Conserver"
+        onConfirm={handleConfirmDeleteCaisse}
+        onCancel={() => { setIsConfirmOpen(false); setCaisseToDeleteId(null); }}
+      />
     </div>
   );
 }

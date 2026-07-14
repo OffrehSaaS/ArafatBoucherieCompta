@@ -38,6 +38,10 @@ export default function VentesPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [saleToDeleteId, setSaleToDeleteId] = useState<string | null>(null);
 
+  // Batch delete states
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBatchConfirmOpen, setIsBatchConfirmOpen] = useState(false);
+
   // Form State
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState<number>(0);
@@ -54,6 +58,7 @@ export default function VentesPage() {
   const loadData = () => {
     setProducts(LocalDbStore.getProducts());
     setSales(LocalDbStore.getSales().sort((a,b) => b.createdAt.localeCompare(a.createdAt)));
+    setSelectedIds([]);
   };
 
   const handleOpenModal = () => {
@@ -106,6 +111,38 @@ export default function VentesPage() {
       } catch (err: any) {
         alert(err.message);
       }
+    }
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredSales.map(s => s.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    setIsBatchConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteSelected = () => {
+    try {
+      const userName = user?.fullName || 'Vendeur';
+      for (const id of selectedIds) {
+        LocalDbStore.deleteSale(id, userName);
+      }
+      setSelectedIds([]);
+      setIsBatchConfirmOpen(false);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Une erreur est survenue.');
     }
   };
 
@@ -297,11 +334,43 @@ export default function VentesPage() {
       </div>
 
       {/* Table Container */}
+      {/* Batch delete action bar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-rose-955/20 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-250 backdrop-blur-md mb-4"
+          >
+            <div className="flex items-center space-x-2">
+              <span className="font-extrabold text-sm text-rose-350">{selectedIds.length}</span>
+              <span className="text-slate-455 font-medium">vente(s) sélectionnée(s) pour suppression</span>
+            </div>
+            <button
+              onClick={handleDeleteSelected}
+              className="px-4 py-2.5 bg-rose-500 hover:bg-rose-455 text-white font-extrabold rounded-xl transition-colors cursor-pointer text-xs uppercase tracking-wider"
+            >
+              Supprimer la sélection
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Table Container */}
       <div className="bg-slate-900 border border-slate-850 rounded-3xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/40">
+                <th className="py-4 px-6 w-10">
+                  <input
+                    type="checkbox"
+                    checked={filteredSales.length > 0 && selectedIds.length === filteredSales.length}
+                    onChange={handleSelectAll}
+                    className="rounded border-slate-850 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4"
+                  />
+                </th>
                 <th className="py-4 px-6">Date & Heure</th>
                 <th className="py-4 px-6">Produit</th>
                 <th className="py-4 px-6 text-right">Prix Unitaire</th>
@@ -316,6 +385,14 @@ export default function VentesPage() {
               {filteredSales.length > 0 ? (
                 filteredSales.map(sale => (
                   <tr key={sale.id} className="hover:bg-slate-850/30 transition-colors">
+                    <td className="py-4 px-6 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(sale.id)}
+                        onChange={() => handleSelectRow(sale.id)}
+                        className="rounded border-slate-850 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4"
+                      />
+                    </td>
                     <td className="py-4 px-6 text-slate-550">
                       {formatDate(sale.createdAt)} · <span className="text-[10px]">{formatTime(sale.createdAt)}</span>
                     </td>
@@ -365,7 +442,7 @@ export default function VentesPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                   <td colSpan={9} className="py-12 text-center text-slate-500">
                     <ShoppingCart className="h-12 w-12 mx-auto mb-2 opacity-35 text-slate-400" />
                     <span>Aucune vente enregistrée.</span>
                   </td>
@@ -549,6 +626,18 @@ export default function VentesPage() {
         cancelText="Conserver"
         onConfirm={handleConfirmDelete}
         onCancel={() => { setIsConfirmOpen(false); setSaleToDeleteId(null); }}
+      />
+
+      {/* Delete Selection Confirmation */}
+      <ConfirmDialog
+        isOpen={isBatchConfirmOpen}
+        title="Supprimer les ventes sélectionnées"
+        message={`Voulez-vous vraiment supprimer les ${selectedIds.length} ventes sélectionnées ? Pour les ventes directes (hors sortie), les quantités vendues seront restituées au stock au frigo.`}
+        type="danger"
+        confirmText="Supprimer les ventes"
+        cancelText="Conserver"
+        onConfirm={handleConfirmDeleteSelected}
+        onCancel={() => setIsBatchConfirmOpen(false)}
       />
     </div>
   );

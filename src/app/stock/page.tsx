@@ -60,6 +60,10 @@ export default function StockPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDeleteId, setProductToDeleteId] = useState<string | null>(null);
 
+  // Batch delete states
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBatchConfirmOpen, setIsBatchConfirmOpen] = useState(false);
+
   // Delete Category Dialog States
   const [isDeleteCatDialogOpen, setIsDeleteCatDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
@@ -123,6 +127,7 @@ export default function StockPage() {
     setSuppliers(sups);
     setHistory(hist);
     setCategories(cats);
+    setSelectedIds([]);
 
     if (cats.length > 0) {
       setCategory(cats[0]);
@@ -306,6 +311,38 @@ export default function StockPage() {
       setIsDeleteDialogOpen(false);
       setProductToDeleteId(null);
       loadData();
+    }
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredProducts.map(p => p.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    setIsBatchConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteSelected = () => {
+    try {
+      const userName = user?.fullName || 'Administrateur';
+      for (const id of selectedIds) {
+        LocalDbStore.deleteProduct(id, userName);
+      }
+      setSelectedIds([]);
+      setIsBatchConfirmOpen(false);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Une erreur est survenue.');
     }
   };
 
@@ -503,12 +540,45 @@ export default function StockPage() {
             </div>
           </div>
 
+          {/* Batch delete action bar */}
+          <AnimatePresence>
+            {isAdmin && selectedIds.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-rose-955/20 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-250 backdrop-blur-md mb-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <span className="font-extrabold text-sm text-rose-350">{selectedIds.length}</span>
+                  <span className="text-slate-450 font-medium">produit(s) sélectionné(s) pour suppression</span>
+                </div>
+                <button
+                  onClick={handleDeleteSelected}
+                  className="px-4 py-2.5 bg-rose-500 hover:bg-rose-455 text-white font-extrabold rounded-xl transition-colors cursor-pointer text-xs uppercase tracking-wider"
+                >
+                  Supprimer la sélection
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Table Container */}
           <div className="bg-slate-900 border border-slate-850 rounded-3xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/40">
+                    {isAdmin && (
+                      <th className="py-4 px-6 w-10">
+                        <input
+                          type="checkbox"
+                          checked={filteredProducts.length > 0 && selectedIds.length === filteredProducts.length}
+                          onChange={handleSelectAll}
+                          className="rounded border-slate-855 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4"
+                        />
+                      </th>
+                    )}
                     <th className="py-4 px-6">Produit</th>
                     <th className="py-4 px-6">Catégorie</th>
                     <th className="py-4 px-6 text-right">Prix Unitaire</th>
@@ -523,6 +593,16 @@ export default function StockPage() {
                   {filteredProducts.length > 0 ? (
                     filteredProducts.map(prod => (
                       <tr key={prod.id} className="hover:bg-slate-850/30 transition-colors">
+                        {isAdmin && (
+                          <td className="py-4 px-6 w-10">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(prod.id)}
+                              onChange={() => handleSelectRow(prod.id)}
+                              className="rounded border-slate-855 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4"
+                            />
+                          </td>
+                        )}
                         <td className="py-4 px-6 font-bold text-white">{prod.name}</td>
                         <td className="py-4 px-6">
                           <span className="px-2.5 py-1 rounded-full bg-slate-950 text-slate-400 font-medium">
@@ -566,7 +646,7 @@ export default function StockPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={isAdmin ? 8 : 7} className="py-12 text-center text-slate-500">
+                      <td colSpan={isAdmin ? 9 : 8} className="py-12 text-center text-slate-500">
                         <Inbox className="h-12 w-12 mx-auto mb-2 opacity-30 text-slate-400" />
                         <span>Aucun produit trouvé dans le stock.</span>
                       </td>
@@ -1161,6 +1241,18 @@ export default function StockPage() {
         cancelText="Conserver"
         onConfirm={handleConfirmDeleteCat}
         onCancel={() => setIsDeleteCatDialogOpen(false)}
+      />
+
+      {/* Delete Selection Confirmation */}
+      <ConfirmDialog
+        isOpen={isBatchConfirmOpen}
+        title="Supprimer la sélection"
+        message={`Voulez-vous vraiment supprimer les ${selectedIds.length} produits sélectionnés du catalogue ? Leurs entrées et sorties passées resteront enregistrées pour intégrité comptable, mais ils ne seront plus disponibles pour de nouvelles opérations.`}
+        type="danger"
+        confirmText="Supprimer la sélection"
+        cancelText="Conserver"
+        onConfirm={handleConfirmDeleteSelected}
+        onCancel={() => setIsBatchConfirmOpen(false)}
       />
     </div>
   );

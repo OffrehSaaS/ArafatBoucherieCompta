@@ -43,6 +43,10 @@ export default function StockRestantPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [restantToDeleteId, setRestantToDeleteId] = useState<string | null>(null);
 
+  // Batch delete states
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBatchConfirmOpen, setIsBatchConfirmOpen] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -50,6 +54,7 @@ export default function StockRestantPage() {
   const loadData = () => {
     setProducts(LocalDbStore.getProducts());
     setStockRestants(LocalDbStore.getStockRestants().sort((a,b) => b.createdAt.localeCompare(a.createdAt)));
+    setSelectedIds([]);
   };
 
   const handleOpenModal = () => {
@@ -135,6 +140,38 @@ export default function StockRestantPage() {
       } catch (err: any) {
         alert(err.message);
       }
+    }
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredRestants.map(r => r.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    setIsBatchConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteSelected = () => {
+    try {
+      const userName = user?.fullName || 'Utilisateur';
+      for (const id of selectedIds) {
+        LocalDbStore.deleteStockRestant(id, userName);
+      }
+      setSelectedIds([]);
+      setIsBatchConfirmOpen(false);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Une erreur est survenue.');
     }
   };
 
@@ -272,12 +309,43 @@ export default function StockRestantPage() {
         </div>
       </div>
 
+      {/* Batch delete action bar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-rose-955/20 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-250 backdrop-blur-md mb-4 print:hidden"
+          >
+            <div className="flex items-center space-x-2">
+              <span className="font-extrabold text-sm text-rose-350">{selectedIds.length}</span>
+              <span className="text-slate-455 font-medium">saisie(s) de stock restant sélectionnée(s) pour suppression</span>
+            </div>
+            <button
+              onClick={handleDeleteSelected}
+              className="px-4 py-2.5 bg-rose-500 hover:bg-rose-455 text-white font-extrabold rounded-xl transition-colors cursor-pointer text-xs uppercase tracking-wider"
+            >
+              Supprimer la sélection
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Table Container */}
       <div className="bg-slate-900 border border-slate-850 rounded-3xl overflow-hidden print:border print:bg-white print:text-black">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/40 print:bg-gray-100 print:text-black print:border-b">
+                <th className="py-4 px-6 w-10 print:hidden">
+                  <input
+                    type="checkbox"
+                    checked={filteredRestants.length > 0 && selectedIds.length === filteredRestants.length}
+                    onChange={handleSelectAll}
+                    className="rounded border-slate-850 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4"
+                  />
+                </th>
                 <th className="py-4 px-6">Date & Heure</th>
                 <th className="py-4 px-6">Produit</th>
                 <th className="py-4 px-6 text-right">Valeur Restante</th>
@@ -291,7 +359,15 @@ export default function StockRestantPage() {
               {filteredRestants.length > 0 ? (
                 filteredRestants.map(entry => (
                   <tr key={entry.id} className="hover:bg-slate-850/30 transition-colors">
-                    <td className="py-4 px-6 text-slate-550">
+                    <td className="py-4 px-6 w-10 print:hidden">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(entry.id)}
+                        onChange={() => handleSelectRow(entry.id)}
+                        className="rounded border-slate-850 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4"
+                      />
+                    </td>
+                    <td className="py-4 px-6 text-slate-555">
                       {formatDate(entry.createdAt)} · <span className="text-[10px]">{formatTime(entry.createdAt)}</span>
                     </td>
                     <td className="py-4 px-6 font-bold text-white print:text-black">{entry.productName}</td>
@@ -329,7 +405,7 @@ export default function StockRestantPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-500">
                     Aucun stock restant fin de journée enregistré pour cette plage de dates.
                   </td>
                 </tr>
@@ -477,6 +553,18 @@ export default function StockRestantPage() {
         cancelText="Conserver"
         onConfirm={handleConfirmDelete}
         onCancel={() => { setIsConfirmOpen(false); setRestantToDeleteId(null); }}
+      />
+
+      {/* Delete Selection Confirmation */}
+      <ConfirmDialog
+        isOpen={isBatchConfirmOpen}
+        title="Supprimer les saisies sélectionnées"
+        message={`Voulez-vous vraiment supprimer les ${selectedIds.length} enregistrements de stock restant sélectionnés ? Cela annulera également les ventes générées automatiquement et retirera les quantités correspondantes du frigo.`}
+        type="danger"
+        confirmText="Supprimer les saisies"
+        cancelText="Conserver"
+        onConfirm={handleConfirmDeleteSelected}
+        onCancel={() => setIsBatchConfirmOpen(false)}
       />
     </div>
   );
