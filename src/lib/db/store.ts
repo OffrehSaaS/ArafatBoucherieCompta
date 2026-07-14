@@ -121,6 +121,7 @@ export interface Expense {
   description: string;
   recordedBy: string;
   createdAt: string;
+  sourceSalaryId?: string;
 }
 
 export interface Debt {
@@ -301,6 +302,7 @@ export class LocalDbStore {
       // Remove frontend-only display fields that do not exist as DB columns
       delete snakeRecord.product_name;
       delete snakeRecord.supplier_name;
+      delete snakeRecord.source_salary_id;
 
       // Remove GENERATED ALWAYS columns that PostgreSQL rejects on insert/update
       if (table === 'sales' || table === 'outputs') {
@@ -1559,12 +1561,77 @@ export class LocalDbStore {
       amount: salary.amountPaid,
       category: 'Salaires',
       description: `Salaire journalier payé à ${employee.firstName} ${employee.lastName} (${salary.paidAt})`,
-      recordedBy: userName
+      recordedBy: userName,
+      sourceSalaryId: newSalary.id
     }, userName);
 
     this.addActivityLog('Paiement Salaire', `Salaire journalier de ${salary.amountPaid} FCFA payé à ${employee.firstName} ${employee.lastName}`, userName);
     this.recalculateCaisseForToday();
     return newSalary;
+  }
+
+  static updateSalary(id: string, updates: Partial<Salary>, userName: string): Salary {
+    const salaries = this.getSalaries();
+    const index = salaries.findIndex(s => s.id === id);
+    if (index === -1) throw new Error('Salaire non trouvé');
+
+    const original = salaries[index];
+    const employees = this.getEmployees();
+    const employee = employees.find(e => e.id === (updates.employeeId || original.employeeId));
+    const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : original.employeeName;
+
+    const updatedSalary: Salary = {
+      ...original,
+      ...updates,
+      employeeName
+    };
+    salaries[index] = updatedSalary;
+    setLocalStorageData('boucherie_salaries', salaries);
+    this.syncToSupabase('salaries', 'update', updatedSalary);
+
+    // Update the associated expense
+    const expenses = this.getExpenses();
+    const expIndex = expenses.findIndex(e => e.sourceSalaryId === id);
+    if (expIndex !== -1) {
+      const exp = expenses[expIndex];
+      const updatedExpense = {
+        ...exp,
+        amount: updatedSalary.amountPaid,
+        description: `Salaire journalier payé à ${employeeName} (${updatedSalary.paidAt})`,
+        createdAt: updatedSalary.paidAt ? new Date(updatedSalary.paidAt + 'T12:00:00Z').toISOString() : exp.createdAt
+      };
+      expenses[expIndex] = updatedExpense;
+      setLocalStorageData('boucherie_expenses', expenses);
+      this.syncToSupabase('expenses', 'update', updatedExpense);
+      this.recalculateCaisseForDate(updatedExpense.createdAt.split('T')[0]);
+    }
+
+    this.addActivityLog('Modification Salaire', `Paiement de salaire de ${original.employeeName} modifié par l'administrateur.`, userName);
+    this.recalculateCaisseForToday();
+    return updatedSalary;
+  }
+
+  static deleteSalary(id: string, userName: string) {
+    let salaries = this.getSalaries();
+    const salary = salaries.find(s => s.id === id);
+    if (!salary) throw new Error('Salaire non trouvé');
+
+    salaries = salaries.filter(s => s.id !== id);
+    setLocalStorageData('boucherie_salaries', salaries);
+    this.syncToSupabase('salaries', 'delete', { id });
+
+    // Delete the associated expense
+    let expenses = this.getExpenses();
+    const exp = expenses.find(e => e.sourceSalaryId === id);
+    if (exp) {
+      expenses = expenses.filter(e => e.sourceSalaryId !== id);
+      setLocalStorageData('boucherie_expenses', expenses);
+      this.syncToSupabase('expenses', 'delete', { id: exp.id });
+      this.recalculateCaisseForDate(exp.createdAt.split('T')[0]);
+    }
+
+    this.addActivityLog('Suppression Salaire', `Paiement de salaire de ${salary.employeeName} (${salary.amountPaid} FCFA) supprimé.`, userName);
+    this.recalculateCaisseForToday();
   }
 
   // Helper records

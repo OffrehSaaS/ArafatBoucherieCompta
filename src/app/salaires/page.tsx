@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { LocalDbStore, Salary, Employee } from '@/lib/db/store';
 import { formatFCFA, formatDate } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { 
   CircleDollarSign, 
   Plus, 
@@ -14,7 +15,9 @@ import {
   Info,
   Lock,
   Wallet,
-  Coins
+  Coins,
+  Edit3,
+  Trash2
 } from 'lucide-react';
 
 export default function SalairesPage() {
@@ -29,6 +32,15 @@ export default function SalairesPage() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSalary, setEditingSalary] = useState<Salary | null>(null);
+
+  // Confirm delete states
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [salaryToDeleteId, setSalaryToDeleteId] = useState<string | null>(null);
+
+  // Batch delete states
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBatchConfirmOpen, setIsBatchConfirmOpen] = useState(false);
 
   // Form State
   const [employeeId, setEmployeeId] = useState('');
@@ -49,6 +61,7 @@ export default function SalairesPage() {
     setSalaries(LocalDbStore.getSalaries().sort((a,b) => b.createdAt.localeCompare(a.createdAt)));
     const emps = LocalDbStore.getEmployees().filter(e => e.active);
     setEmployees(emps);
+    setSelectedIds([]);
     if (emps.length > 0) {
       setEmployeeId(emps[0].id);
     }
@@ -70,6 +83,7 @@ export default function SalairesPage() {
   const handleOpenModal = () => {
     const emps = LocalDbStore.getEmployees().filter(e => e.active);
     setEmployees(emps);
+    setEditingSalary(null);
     if (emps.length > 0) {
       setEmployeeId(emps[0].id);
     } else {
@@ -82,6 +96,25 @@ export default function SalairesPage() {
     setNotes('Salaire journalier');
     setError('');
     setIsModalOpen(true);
+  };
+
+  const handleEditClick = (sal: Salary) => {
+    const emps = LocalDbStore.getEmployees().filter(e => e.active);
+    setEmployees(emps);
+    setEditingSalary(sal);
+    setEmployeeId(sal.employeeId);
+    setDailyWage(sal.dailyWage);
+    setAmountPaid(sal.amountPaid);
+    setPaidAt(sal.paidAt);
+    setStatus(sal.status);
+    setNotes(sal.notes);
+    setError('');
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setSalaryToDeleteId(id);
+    setIsConfirmOpen(true);
   };
 
   const handleEmployeeChange = (empId: string) => {
@@ -116,11 +149,60 @@ export default function SalairesPage() {
         paidAt
       };
 
-      LocalDbStore.paySalary(payload, user?.fullName || 'Administrateur');
+      if (editingSalary) {
+        LocalDbStore.updateSalary(editingSalary.id, payload, user?.fullName || 'Administrateur');
+      } else {
+        LocalDbStore.paySalary(payload, user?.fullName || 'Administrateur');
+      }
       setIsModalOpen(false);
       loadData();
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue.');
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (salaryToDeleteId) {
+      try {
+        LocalDbStore.deleteSalary(salaryToDeleteId, user?.fullName || 'Administrateur');
+        setIsConfirmOpen(false);
+        setSalaryToDeleteId(null);
+        loadData();
+      } catch (err: any) {
+        alert(err.message);
+      }
+    }
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredSalaries.map(s => s.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    setIsBatchConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteSelected = () => {
+    try {
+      const userName = user?.fullName || 'Administrateur';
+      for (const id of selectedIds) {
+        LocalDbStore.deleteSalary(id, userName);
+      }
+      setSelectedIds([]);
+      setIsBatchConfirmOpen(false);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Une erreur est survenue.');
     }
   };
 
@@ -188,30 +270,70 @@ export default function SalairesPage() {
         </div>
       </div>
 
+      {/* Batch delete action bar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-rose-955/20 border border-rose-900/40 p-4 rounded-2xl flex items-center justify-between text-xs text-rose-250 backdrop-blur-md mb-4"
+          >
+            <div className="flex items-center space-x-2">
+              <span className="font-extrabold text-sm text-rose-350">{selectedIds.length}</span>
+              <span className="text-slate-455 font-medium">paiement(s) de salaire sélectionné(s) pour suppression</span>
+            </div>
+            <button
+              onClick={handleDeleteSelected}
+              className="px-4 py-2.5 bg-rose-500 hover:bg-rose-455 text-white font-extrabold rounded-xl transition-colors cursor-pointer text-xs uppercase tracking-wider"
+            >
+              Supprimer la sélection
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Table Container */}
       <div className="bg-slate-900 border border-slate-850 rounded-3xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/40">
+                <th className="py-4 px-6 w-10">
+                  <input
+                    type="checkbox"
+                    checked={filteredSalaries.length > 0 && selectedIds.length === filteredSalaries.length}
+                    onChange={handleSelectAll}
+                    className="rounded border-slate-850 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4"
+                  />
+                </th>
                 <th className="py-4 px-6">Date de Prestation</th>
                 <th className="py-4 px-6">Employé</th>
                 <th className="py-4 px-6 text-right">Taux Journalier</th>
                 <th className="py-4 px-6 text-right">Montant Payé</th>
                 <th className="py-4 px-6">Statut</th>
                 <th className="py-4 px-6">Observations / Notes</th>
+                <th className="py-4 px-6 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-xs text-slate-350">
               {filteredSalaries.length > 0 ? (
                 filteredSalaries.map(sal => (
                   <tr key={sal.id} className="hover:bg-slate-850/30 transition-colors">
+                    <td className="py-4 px-6 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(sal.id)}
+                        onChange={() => handleSelectRow(sal.id)}
+                        className="rounded border-slate-850 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4"
+                      />
+                    </td>
                     <td className="py-4 px-6 text-slate-550 font-medium">
                       {formatDate(sal.paidAt)}
                     </td>
                     <td className="py-4 px-6 font-bold text-white">{sal.employeeName}</td>
                     <td className="py-4 px-6 text-right font-semibold text-slate-400">{formatFCFA(sal.dailyWage)}</td>
-                    <td className="py-4 px-6 text-right font-extrabold text-emerald-450">{formatFCFA(sal.amountPaid)}</td>
+                    <td className="py-4 px-6 text-right font-extrabold text-emerald-455">{formatFCFA(sal.amountPaid)}</td>
                     <td className="py-4 px-6">
                       <span className={`px-2.5 py-0.5 rounded font-bold text-[9px] uppercase ${
                         sal.status === 'Payé' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-455'
@@ -220,11 +342,29 @@ export default function SalairesPage() {
                       </span>
                     </td>
                     <td className="py-4 px-6 text-slate-400 font-light truncate max-w-xs">{sal.notes || '-'}</td>
+                    <td className="py-4 px-6 text-center">
+                      <div className="flex justify-center items-center space-x-2">
+                        <button
+                          onClick={() => handleEditClick(sal)}
+                          className="p-1.5 bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                          title="Modifier le salaire"
+                        >
+                          <Edit3 size={12} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(sal.id)}
+                          className="p-1.5 bg-rose-955/20 hover:bg-rose-900/40 text-rose-455 rounded-lg transition-colors cursor-pointer"
+                          title="Supprimer le salaire"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-500">
                     <Coins className="h-12 w-12 mx-auto mb-2 opacity-35 text-slate-400" />
                     <span>Aucun paiement de salaire enregistré.</span>
                   </td>
@@ -258,7 +398,7 @@ export default function SalairesPage() {
               <div className="flex items-center justify-between pb-4 border-b border-slate-850">
                 <h3 className="text-lg font-extrabold text-white flex items-center">
                   <Sparkles className="text-emerald-450 mr-2 h-5 w-5" />
-                  Payer un Salaire
+                  {editingSalary ? 'Modifier le Salaire' : 'Payer un Salaire'}
                 </h3>
                 <button
                   onClick={() => setIsModalOpen(false)}
@@ -370,7 +510,7 @@ export default function SalairesPage() {
                     type="submit"
                     className="w-1/2 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-bold text-xs transition-colors cursor-pointer"
                   >
-                    Valider le Paiement
+                    {editingSalary ? 'Modifier le Paiement' : 'Valider le Paiement'}
                   </button>
                 </div>
               </form>
@@ -378,6 +518,28 @@ export default function SalairesPage() {
           </div>
         )}
       </AnimatePresence>
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        title="Supprimer le salaire"
+        message="Voulez-vous vraiment supprimer cet enregistrement de salaire ? Cela annulera également la dépense de caisse associée."
+        type="danger"
+        confirmText="Supprimer"
+        cancelText="Conserver"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => { setIsConfirmOpen(false); setSalaryToDeleteId(null); }}
+      />
+
+      {/* Delete Selection Confirmation */}
+      <ConfirmDialog
+        isOpen={isBatchConfirmOpen}
+        title="Supprimer les salaires sélectionnés"
+        message={`Voulez-vous vraiment supprimer les ${selectedIds.length} salaires sélectionnés ? Les dépenses de caisse associées seront également annulées.`}
+        type="danger"
+        confirmText="Supprimer les salaires"
+        cancelText="Conserver"
+        onConfirm={handleConfirmDeleteSelected}
+        onCancel={() => setIsBatchConfirmOpen(false)}
+      />
     </div>
   );
 }
