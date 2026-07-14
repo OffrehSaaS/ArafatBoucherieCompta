@@ -177,6 +177,15 @@ export default function EmployesPage() {
     }
   };
 
+  const handleRoleChange = (id: string, role: 'admin' | 'vendeur') => {
+    try {
+      LocalDbStore.updateAccountRole(id, role, user?.fullName || 'Administrateur');
+      loadData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   const handleOpenResetPwdModal = (id: string) => {
     setResetPwdAccountId(id);
     setNewPasswordValue('');
@@ -410,11 +419,24 @@ export default function EmployesPage() {
                       <td className="py-4 px-6 font-mono text-slate-450">{acc.email}</td>
                       <td className="py-4 px-6 text-slate-450">{acc.phone}</td>
                       <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                          acc.role === 'admin' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                        }`}>
-                          {acc.role === 'admin' ? 'Admin' : 'Vendeur'}
-                        </span>
+                        {acc.email === user?.email ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Admin
+                          </span>
+                        ) : (
+                          <select
+                            value={acc.role}
+                            onChange={(e) => handleRoleChange(acc.id, e.target.value as 'admin' | 'vendeur')}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer ${
+                              acc.role === 'admin' 
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            }`}
+                          >
+                            <option value="vendeur" className="bg-slate-900 text-amber-400">Vendeur</option>
+                            <option value="admin" className="bg-slate-900 text-emerald-400">Admin</option>
+                          </select>
+                        )}
                       </td>
                       <td className="py-4 px-6">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${

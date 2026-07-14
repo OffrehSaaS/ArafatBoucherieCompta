@@ -1882,6 +1882,24 @@ export class LocalDbStore {
     return account;
   }
 
+  static updateAccountRole(id: string, role: 'admin' | 'vendeur', userName: string): UserAccount {
+    const accounts = this.getAccounts();
+    const index = accounts.findIndex(acc => acc.id === id);
+    if (index === -1) throw new Error('Compte introuvable.');
+
+    const account = accounts[index];
+    account.role = role;
+    setLocalStorageData('boucherie_accounts', accounts);
+    this.syncToSupabase('profiles', 'update', { id, role });
+
+    this.addActivityLog(
+      'Rôle Compte',
+      `Le rôle de ${account.fullName} a été changé en ${role === 'admin' ? 'Administrateur' : 'Vendeur'} par ${userName}`,
+      userName
+    );
+    return account;
+  }
+
   static deleteAccount(id: string, userName: string) {
     let accounts = this.getAccounts();
     const account = accounts.find(acc => acc.id === id);
