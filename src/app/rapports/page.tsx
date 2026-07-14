@@ -15,7 +15,9 @@ import {
   TrendingUp,
   Receipt,
   Coins,
-  Warehouse
+  Warehouse,
+  Copy,
+  Share2
 } from 'lucide-react';
 
 export default function RapportsPage() {
@@ -32,6 +34,15 @@ export default function RapportsPage() {
 
   // Period state
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year'>('day');
+
+  const [canShare, setCanShare] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+      setCanShare(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (isAdmin) {
@@ -172,7 +183,11 @@ export default function RapportsPage() {
 
   // --- ACTIONS: EXPORTS ---
   const handlePrint = () => {
-    window.print();
+    if (typeof window !== 'undefined' && typeof window.print === 'function') {
+      window.print();
+    } else {
+      alert("L'impression PDF n'est pas supportée directement par votre navigateur mobile ou cette application. Veuillez utiliser le bouton 'Copier Texte' ou 'Partager' ci-dessous pour exporter ou envoyer le rapport.");
+    }
   };
 
   const handleExportCSV = () => {
@@ -192,11 +207,70 @@ export default function RapportsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
+    link.target = '_blank';
     link.setAttribute('download', `Rapport_${period}_BoucherieArafat.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const getReportText = () => {
+    const periodLabel = period === 'day' ? 'Journalier' : period === 'week' ? 'Hebdomadaire' : period === 'month' ? 'Mensuel' : 'Annuel';
+    return `ARAFAT COMPTA - Rapport Financier (${periodLabel})
+Date : ${new Date().toLocaleDateString('fr-FR')}
+
+• Chiffre d'Affaires Brut (Ventes) : +${formatFCFA(totalSales)}
+• Valeur du Stock au Frigo : +${formatFCFA(totalStockVal)}
+• Pertes (Avaries, vols) : -${formatFCFA(totalLosses)}
+---------------------------------------------
+BÉNÉFICE BRUT D'EXPLOITATION : ${formatFCFA(grossBenefit)}
+---------------------------------------------
+• Charges d'Exploitation : -${formatFCFA(totalExpenses)}
+• Charges de Personnel (Salaires) : -${formatFCFA(totalSalaries)}
+• Dettes Fournisseurs Créées : -${formatFCFA(totalDebts)}
+---------------------------------------------
+BÉNÉFICE NET EN COURS : ${formatFCFA(netBenefit)}`;
+  };
+
+  const handleCopyToClipboard = () => {
+    const text = getReportText();
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 3000);
+        })
+        .catch(err => {
+          console.error('Erreur lors de la copie', err);
+        });
+    } else {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 3000);
+      } catch (err) {
+        console.error('Fallback copy error', err);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
+  const handleShare = () => {
+    const text = getReportText();
+    const periodLabel = period === 'day' ? 'Journalier' : period === 'week' ? 'Hebdomadaire' : period === 'month' ? 'Mensuel' : 'Annuel';
+    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+      (navigator as any).share({
+        title: `Rapport Financier ${periodLabel} - Boucherie Arafat`,
+        text: text,
+      }).catch((err: any) => {
+        console.error('Erreur lors du partage', err);
+      });
+    }
   };
 
   return (
@@ -215,11 +289,12 @@ export default function RapportsPage() {
         <div className="flex flex-wrap gap-2.5 sm:space-x-3 sm:gap-0 w-full sm:w-auto">
           <button
             onClick={handleExportCSV}
-            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white rounded-2xl font-bold cursor-pointer transition-colors shrink-0 whitespace-nowrap"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white rounded-2xl font-bold cursor-pointer transition-colors shrink-0 whitespace-nowrap animate-pulse-slow"
           >
             <FileSpreadsheet size={18} className="text-emerald-450" />
             <span>Excel (CSV)</span>
           </button>
+          
           <button
             onClick={handlePrint}
             className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl font-bold cursor-pointer transition-colors shrink-0 whitespace-nowrap"
@@ -227,6 +302,25 @@ export default function RapportsPage() {
             <Printer size={18} />
             <span>Imprimer PDF</span>
           </button>
+
+          <button
+            onClick={handleCopyToClipboard}
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white rounded-2xl font-bold cursor-pointer transition-colors shrink-0 whitespace-nowrap"
+            title="Copier le bilan sous forme de texte"
+          >
+            <Copy size={18} className={copied ? "text-emerald-400" : "text-blue-400"} />
+            <span>{copied ? 'Copié !' : 'Copier Texte'}</span>
+          </button>
+
+          {canShare && (
+            <button
+              onClick={handleShare}
+              className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white rounded-2xl font-bold cursor-pointer transition-colors shrink-0 whitespace-nowrap"
+            >
+              <Share2 size={18} className="text-indigo-400" />
+              <span>Partager</span>
+            </button>
+          )}
         </div>
       </div>
 
