@@ -153,7 +153,6 @@ export default function StockPage() {
   };
 
   const openEditModal = (product: Product) => {
-    if (!isAdmin) return;
     setEditingProduct(product);
     setName(product.name);
     setCategory(product.category);
@@ -176,8 +175,8 @@ export default function StockPage() {
       setError('Le nom du produit est obligatoire.');
       return;
     }
-    if (unitPrice <= 0) {
-      setError('Le prix unitaire doit être supérieur à 0 FCFA.');
+    if (unitPrice < 0) {
+      setError('Le prix unitaire ne peut pas être négatif.');
       return;
     }
     if (quantity < 0) {
@@ -268,8 +267,8 @@ export default function StockPage() {
       setError('Sélectionnez un produit.');
       return;
     }
-    if (incomingQty <= 0) {
-      setError('La quantité calculée doit être supérieure à 0 (ajustez le montant total et le prix unitaire).');
+    if (incomingQty < 0) {
+      setError('La quantité calculée ne peut pas être négative (ajustez le montant total et le prix unitaire).');
       return;
     }
     if (!incomingSupplierId) {
