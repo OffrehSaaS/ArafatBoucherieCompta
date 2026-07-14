@@ -56,12 +56,6 @@ export default function DettesPage() {
   const [amountPaid, setAmountPaid] = useState<number>(0);
   const [paymentError, setPaymentError] = useState('');
 
-  useEffect(() => {
-    if (isAdmin) {
-      loadData();
-    }
-  }, [isAdmin]);
-
   const loadData = () => {
     const d = LocalDbStore.getDebts();
     const p = LocalDbStore.getDebtPayments();
@@ -69,22 +63,11 @@ export default function DettesPage() {
     setDebts(d);
     setPayments(p);
     setSuppliers(s);
-    if (s.length > 0) {
-      setSupplierId(s[0].id);
-    }
   };
 
-  if (!isAdmin) {
-    return (
-      <div className="flex h-[75vh] flex-col items-center justify-center text-center p-6 bg-slate-900/30 border border-slate-800 rounded-3xl">
-        <Lock className="h-16 w-16 text-rose-500 mb-4 animate-bounce" />
-        <h2 className="text-xl font-black text-white">Accès Restreint</h2>
-        <p className="text-slate-400 text-sm max-w-sm mt-2">
-          Le module de gestion des dettes fournisseurs contient des informations confidentielles et n'est accessible qu'aux comptes Administrateurs.
-        </p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleOpenDebtModal = () => {
     setEditingDebt(null);
@@ -142,8 +125,8 @@ export default function DettesPage() {
       setDebtError('Veuillez sélectionner un fournisseur.');
       return;
     }
-    if (totalAmount <= 0) {
-      setDebtError('Le montant de la dette doit être supérieur à 0 FCFA.');
+    if (totalAmount < 0) {
+      setDebtError('Le montant de la dette ne peut pas être négatif.');
       return;
     }
 
@@ -177,8 +160,8 @@ export default function DettesPage() {
     setPaymentError('');
 
     if (!selectedDebt) return;
-    if (amountPaid <= 0) {
-      setPaymentError('Veuillez entrer un montant supérieur à 0 FCFA.');
+    if (amountPaid < 0) {
+      setPaymentError('Le montant payé ne peut pas être négatif.');
       return;
     }
     if (amountPaid > selectedDebt.remainingAmount) {
@@ -486,7 +469,7 @@ export default function DettesPage() {
                   <input
                     type="number"
                     required
-                    min={1000}
+                    min={0}
                     value={totalAmount || ''}
                     onChange={e => setTotalAmount(Number(e.target.value))}
                     placeholder="Ex: 250000"
@@ -593,7 +576,7 @@ export default function DettesPage() {
                   <input
                     type="number"
                     required
-                    min={100}
+                    min={0}
                     max={selectedDebt.remainingAmount}
                     value={amountPaid || ''}
                     onChange={e => setAmountPaid(Number(e.target.value))}

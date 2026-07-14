@@ -142,12 +142,12 @@ export default function VentesPage() {
       setError('Veuillez sélectionner un produit.');
       return;
     }
-    if (quantity <= 0) {
-      setError('Veuillez spécifier une quantité valide (supérieure à 0).');
+    if (quantity < 0) {
+      setError('Veuillez spécifier une quantité valide.');
       return;
     }
-    if (unitPrice <= 0) {
-      setError('Le prix unitaire doit être supérieur à 0.');
+    if (unitPrice < 0) {
+      setError('Le prix unitaire ne peut pas être négatif.');
       return;
     }
 
@@ -458,7 +458,7 @@ export default function VentesPage() {
                     <input
                       type="number"
                       required
-                      min={1}
+                      min={0}
                       value={unitPrice || ''}
                       onChange={e => updateVenteUnitPrice(Number(e.target.value))}
                       placeholder="Ex: 3500"

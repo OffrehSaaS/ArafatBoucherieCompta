@@ -63,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
     { name: 'Dépenses', path: '/depenses', icon: Receipt, roles: ['admin', 'vendeur'] },
     { name: 'Caisse', path: '/caisse', icon: Wallet, roles: ['admin', 'vendeur'] },
     { name: 'Fournisseurs', path: '/fournisseurs', icon: Truck, roles: ['admin', 'vendeur'] },
-    { name: 'Dettes aux Fournisseurs', path: '/dettes', icon: FileSpreadsheet, roles: ['admin'] },
+    { name: 'Dettes aux Fournisseurs', path: '/dettes', icon: FileSpreadsheet, roles: ['admin', 'vendeur'] },
     { name: 'Employés', path: '/employes', icon: Users, roles: ['admin'] },
     { name: 'Salaires', path: '/salaires', icon: CircleDollarSign, roles: ['admin'] },
     { name: 'Rapports', path: '/rapports', icon: FileBarChart2, roles: ['admin'] },

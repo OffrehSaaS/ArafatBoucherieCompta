@@ -98,20 +98,17 @@ export default function DepensesPage() {
     e.preventDefault();
     setError('');
 
-    if (amount <= 0) {
-      setError('Veuillez entrer un montant supérieur à 0 FCFA.');
+    if (amount < 0) {
+      setError('Le montant de la dépense ne peut pas être négatif.');
       return;
     }
-    if (!description.trim()) {
-      setError('Veuillez fournir une brève description.');
-      return;
-    }
+    const finalDescription = description.trim() || 'Dépense';
 
     try {
       const payload = {
         amount,
         category,
-        description,
+        description: finalDescription,
         recordedBy: editingExpense ? editingExpense.recordedBy : (user?.fullName || 'Utilisateur'),
         createdAt: expenseDate ? new Date(expenseDate + 'T12:00:00Z').toISOString() : undefined
       };
@@ -371,7 +368,7 @@ export default function DepensesPage() {
                   <input
                     type="number"
                     required
-                    min={100}
+                    min={0}
                     value={amount || ''}
                     onChange={e => setAmount(Number(e.target.value))}
                     placeholder="Ex: 5000"
@@ -381,9 +378,8 @@ export default function DepensesPage() {
 
                 {/* Description */}
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Description / Motif</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Description / Motif <span className="text-slate-500 normal-case font-normal">(Facultatif)</span></label>
                   <textarea
-                    required
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                     placeholder="Ex: Achat de 2 barres de glace pour la conservation de la viande d'agneau."

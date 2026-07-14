@@ -491,9 +491,8 @@ export default function SortiesPage() {
 
                 {/* Reason / Notes */}
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Raison / Notes de Sortie</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Raison / Notes de Sortie <span className="text-slate-500 normal-case font-normal">(Facultatif)</span></label>
                   <textarea
-                    required
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
                     placeholder="Ex: Viande de boeuf avariée suite à coupure d'électricité."
