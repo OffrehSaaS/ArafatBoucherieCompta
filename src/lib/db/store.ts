@@ -303,6 +303,7 @@ export class LocalDbStore {
       delete snakeRecord.product_name;
       delete snakeRecord.supplier_name;
       delete snakeRecord.source_salary_id;
+      delete snakeRecord.employee_name;
 
       // Remove GENERATED ALWAYS columns that PostgreSQL rejects on insert/update
       if (table === 'sales' || table === 'outputs') {
