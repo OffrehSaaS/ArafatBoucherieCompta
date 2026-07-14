@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { LocalDbStore, Product, Sale, Expense, Output, Debt, Employee, CashRegistry, ActivityLog, UserAccount } from '@/lib/db/store';
+import { LocalDbStore, Product, Sale, Expense, Output, Debt, Employee, CashRegistry, ActivityLog, UserAccount, StockRestant } from '@/lib/db/store';
 import { formatFCFA } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import {
@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [cashRegistries, setCashRegistries] = useState<CashRegistry[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [stockRestants, setStockRestants] = useState<StockRestant[]>([]);
 
   // Config States
   const [butcheryName, setButcheryName] = useState('Boucherie Arafat');
@@ -69,6 +70,7 @@ export default function DashboardPage() {
     setCashRegistries(LocalDbStore.getCashRegistries());
     setActivityLogs(LocalDbStore.getActivityLogs());
     setAccounts(LocalDbStore.getAccounts());
+    setStockRestants(LocalDbStore.getStockRestants());
 
     if (typeof window !== 'undefined') {
       const name = window.localStorage.getItem('boucherie_name');
@@ -131,6 +133,10 @@ export default function DashboardPage() {
   // Selected Date's Losses (Pertes déclarées)
   const dailyLosses = todayExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
 
+  // Daily stock restant value
+  const todayRestants = stockRestants.filter(r => r.createdAt.startsWith(filterDateStr));
+  const dailyStockRestantVal = todayRestants.reduce((acc, r) => acc + r.totalValue, 0);
+
   // Current Caisse endingCash & startingCash
   const registries = cashRegistries.filter(r => r.date === filterDateStr);
   const caisseActuelle = registries.length > 0 
@@ -148,8 +154,8 @@ export default function DashboardPage() {
   const totalRemainingDebts = debts.reduce((acc, d) => acc + d.remainingAmount, 0);
 
   // Net Profit (Admin only)
-  // net_profit = Stock + Starting Cash + Sales - Expenses - Salaries - Losses - Debts
-  const netProfit = totalStockValue + startingCash + dailyCA - dailyExpenses - dailySalaries - dailyLosses - totalRemainingDebts;
+  // net_profit = Stock + Sales + Stock Restant - Pertes - Expenses - Salaries - Debts
+  const netProfit = totalStockValue + dailyCA + dailyStockRestantVal - dailyLosses - dailyExpenses - dailySalaries - totalRemainingDebts;
 
   // Active employees on the selected date
   const jsDay = new Date(filterDateStr).getDay(); // 0 is Sunday, 1 is Monday...
@@ -262,8 +268,16 @@ export default function DashboardPage() {
 
         {/* Quick info header status */}
         <div className="flex flex-wrap gap-3">
+          <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 rounded-2xl px-4 py-2.5 shadow-md">
+            <Wallet className="h-5 w-5 text-emerald-450" />
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Caisse de Départ</p>
+              <p className="text-sm font-bold text-white">{formatFCFA(startingCash)}</p>
+            </div>
+          </div>
+
           <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 rounded-2xl px-4 py-2.5">
-            <UserCheck className="h-5 w-5 text-emerald-400" />
+            <UserCheck className="h-5 w-5 text-emerald-450" />
             <div>
               <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Employés Actifs</p>
               <p className="text-sm font-bold text-white">{activeEmployeesCount} Présent(s)</p>
@@ -271,7 +285,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 rounded-2xl px-4 py-2.5">
-            <Target className="h-5 w-5 text-emerald-400" />
+            <Target className="h-5 w-5 text-emerald-450" />
             <div>
               <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Objectif du Jour</p>
               <p className="text-sm font-bold text-white">{targetProgress}% ({formatFCFA(dailyCA)} / {Math.round(dailyTarget / 1000)}k)</p>
@@ -410,7 +424,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="text-[10px] text-emerald-450/80 font-medium mt-3">
-              Calculé : Stock + Caisse Départ + Ventes - Dépenses - Salaires - Pertes - Dettes
+              Calculé : Stock + Ventes + Stock Restant - Pertes - Dépenses - Salaires - Dettes
             </div>
           </motion.div>
         ) : (

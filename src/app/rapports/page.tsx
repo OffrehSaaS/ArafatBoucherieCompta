@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { LocalDbStore, Sale, Expense, Output, Debt, Product } from '@/lib/db/store';
+import { LocalDbStore, Product, Sale, Expense, Output, Debt, Employee, CashRegistry, StockRestant } from '@/lib/db/store';
 import { formatFCFA, formatDate } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { 
@@ -27,6 +27,7 @@ export default function RapportsPage() {
   const [outputs, setOutputs] = useState<Output[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [stockRestants, setStockRestants] = useState<StockRestant[]>([]);
 
   // Period state
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year'>('day');
@@ -43,6 +44,7 @@ export default function RapportsPage() {
     setOutputs(LocalDbStore.getOutputs());
     setDebts(LocalDbStore.getDebts());
     setProducts(LocalDbStore.getProducts());
+    setStockRestants(LocalDbStore.getStockRestants());
   };
 
   if (!isAdmin) {
@@ -120,19 +122,37 @@ export default function RapportsPage() {
     }
   });
 
+  const filteredStockRestants = stockRestants.filter(sr => {
+    const srDate = new Date(sr.createdAt);
+    if (period === 'day') {
+      return sr.createdAt.startsWith(now.toISOString().split('T')[0]);
+    } else if (period === 'week') {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(now.getDate() - 7);
+      return srDate >= oneWeekAgo;
+    } else if (period === 'month') {
+      return srDate.getMonth() === now.getMonth() && srDate.getFullYear() === now.getFullYear();
+    } else {
+      return srDate.getFullYear() === now.getFullYear();
+    }
+  });
+
   // Calculate stats
   const totalSales = filteredSales.reduce((acc, s) => acc + s.totalAmount, 0);
   const totalExpenses = filteredExpensesRaw.filter(e => e.category !== 'Salaires' && e.category !== 'Pertes').reduce((acc, e) => acc + e.amount, 0);
   const totalSalaries = filteredExpensesRaw.filter(e => e.category === 'Salaires').reduce((acc, e) => acc + e.amount, 0);
   const totalLosses = filteredExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
   const totalDebts = filteredDebts.reduce((acc, d) => acc + d.remainingAmount, 0);
+  const totalStockRestantVal = filteredStockRestants.reduce((acc, sr) => acc + sr.totalValue, 0);
 
   // Valuation of inventory
   const totalStockVal = products.reduce((acc, p) => acc + (p.quantity * p.unitPrice), 0);
 
   // Benefits
-  const grossBenefit = totalSales - totalLosses;
-  const netBenefit = totalSales - totalExpenses - totalSalaries - totalLosses;
+  // grossBenefit = Ventes + Valeur Stock + Stock Restant - Pertes
+  const grossBenefit = totalSales + totalStockVal + totalStockRestantVal - totalLosses;
+  // netBenefit = grossBenefit - Dépenses - Salaires - Dettes
+  const netBenefit = grossBenefit - totalExpenses - totalSalaries - totalDebts;
 
   // --- ACTIONS: EXPORTS ---
   const handlePrint = () => {
@@ -279,6 +299,18 @@ export default function RapportsPage() {
               <td className="py-4 px-6 text-right font-extrabold text-emerald-400 print:text-black">+{formatFCFA(totalSales)}</td>
             </tr>
 
+            {/* Valeur du Stock au Frigo */}
+            <tr className="hover:bg-slate-850/20 transition-colors">
+              <td className="py-4 px-6 font-medium">Valeur du Stock au Frigo</td>
+              <td className="py-4 px-6 text-right font-extrabold text-emerald-400 print:text-black">+{formatFCFA(totalStockVal)}</td>
+            </tr>
+
+            {/* Valeur Stock Restant (Invendus) */}
+            <tr className="hover:bg-slate-850/20 transition-colors">
+              <td className="py-4 px-6 font-medium">Valeur Stock Restant (Invendus)</td>
+              <td className="py-4 px-6 text-right font-extrabold text-emerald-400 print:text-black">+{formatFCFA(totalStockRestantVal)}</td>
+            </tr>
+
             {/* Pertes */}
             <tr className="hover:bg-slate-850/20 transition-colors">
               <td className="py-4 px-6 font-medium">Pertes (Avaries, vols, etc.)</td>
@@ -304,14 +336,14 @@ export default function RapportsPage() {
             </tr>
 
             {/* Dettes */}
-            <tr className="hover:bg-slate-850/20 transition-colors text-slate-450">
+            <tr className="hover:bg-slate-850/20 transition-colors">
               <td className="py-4 px-6 font-medium">Dettes Fournisseurs Créées (Non réglées)</td>
-              <td className="py-4 px-6 text-right font-extrabold text-amber-500">{formatFCFA(totalDebts)}</td>
+              <td className="py-4 px-6 text-right font-extrabold text-rose-455">-{formatFCFA(totalDebts)}</td>
             </tr>
 
             {/* Bénéfice net */}
             <tr className="bg-slate-950/60 print:bg-gray-100 border-t-2 border-slate-850 font-black text-sm text-white print:text-black">
-              <td className="py-4.5 px-6">BÉNÉFICE NET DE LA PÉRIODE</td>
+              <td className="py-4.5 px-6">BÉNÉFICE NET EN COURS</td>
               <td className={`py-4.5 px-6 text-right ${netBenefit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {formatFCFA(netBenefit)}
               </td>
