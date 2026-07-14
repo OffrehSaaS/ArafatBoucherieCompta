@@ -50,6 +50,8 @@ export default function StockPage() {
   const [isIncomingModalOpen, setIsIncomingModalOpen] = useState(false);
   const [incomingProductId, setIncomingProductId] = useState('');
   const [incomingQty, setIncomingQty] = useState<number>(0);
+  const [incomingTotalVal, setIncomingTotalVal] = useState<number>(0);
+  const [incomingUnitPrice, setIncomingUnitPrice] = useState<number>(0);
   const [incomingSupplierId, setIncomingSupplierId] = useState('');
   const [incomingNotes, setIncomingNotes] = useState('');
   const [incomingDate, setIncomingDate] = useState('');
@@ -217,10 +219,13 @@ export default function StockPage() {
     const activeProds = products;
     if (activeProds.length > 0) {
       setIncomingProductId(activeProds[0].id);
+      setIncomingUnitPrice(activeProds[0].unitPrice);
     } else {
       setIncomingProductId('');
+      setIncomingUnitPrice(0);
     }
     setIncomingQty(0);
+    setIncomingTotalVal(0);
     if (suppliers.length > 0) {
       setIncomingSupplierId(suppliers[0].id);
     }
@@ -228,6 +233,31 @@ export default function StockPage() {
     setIncomingDate(new Date().toISOString().split('T')[0]);
     setError('');
     setIsIncomingModalOpen(true);
+  };
+
+  const handleIncomingProductChange = (prodId: string) => {
+    setIncomingProductId(prodId);
+    const prod = products.find(p => p.id === prodId);
+    if (prod) {
+      setIncomingUnitPrice(prod.unitPrice);
+      if (incomingTotalVal > 0 && prod.unitPrice > 0) {
+        setIncomingQty(Math.floor(incomingTotalVal / prod.unitPrice));
+      }
+    }
+  };
+
+  const updateIncomingTotalVal = (val: number) => {
+    setIncomingTotalVal(val);
+    if (incomingUnitPrice > 0) {
+      setIncomingQty(Math.floor(val / incomingUnitPrice));
+    }
+  };
+
+  const updateIncomingUnitPrice = (price: number) => {
+    setIncomingUnitPrice(price);
+    if (price > 0 && incomingTotalVal > 0) {
+      setIncomingQty(Math.floor(incomingTotalVal / price));
+    }
   };
 
   const handleSaveIncoming = (e: React.FormEvent) => {
@@ -239,7 +269,7 @@ export default function StockPage() {
       return;
     }
     if (incomingQty <= 0) {
-      setError('La quantité doit être supérieure à 0.');
+      setError('La quantité calculée doit être supérieure à 0 (ajustez le montant total et le prix unitaire).');
       return;
     }
     if (!incomingSupplierId) {
@@ -254,8 +284,10 @@ export default function StockPage() {
         incomingSupplierId,
         incomingNotes,
         user?.fullName || 'Utilisateur',
-        incomingDate ? new Date(incomingDate + 'T12:00:00Z').toISOString() : undefined
+        incomingDate,
+        incomingUnitPrice
       );
+
       setIsIncomingModalOpen(false);
       loadData();
     } catch (err: any) {
@@ -485,7 +517,7 @@ export default function StockPage() {
                     <th className="py-4 px-6 text-right">Valeur Totale</th>
                     <th className="py-4 px-6">Fournisseur</th>
                     <th className="py-4 px-6">Observations</th>
-                    {isAdmin && <th className="py-4 px-6 text-center">Action</th>}
+                    <th className="py-4 px-6 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800 text-xs text-slate-350">
@@ -511,26 +543,26 @@ export default function StockPage() {
                         </td>
                         <td className="py-4 px-6 text-slate-400 font-medium">{prod.supplierName}</td>
                         <td className="py-4 px-6 italic text-slate-500 font-light truncate max-w-xs">{prod.observations || '-'}</td>
-                        {isAdmin && (
-                          <td className="py-4 px-6 text-center">
-                            <div className="flex justify-center space-x-2">
-                              <button
-                                onClick={() => openEditModal(prod)}
-                                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-450 rounded-lg transition-colors cursor-pointer"
-                                title="Modifier Stock Initial / Prix"
-                              >
-                                <Edit3 size={13} />
-                              </button>
+                        <td className="py-4 px-6 text-center">
+                          <div className="flex justify-center space-x-2">
+                            <button
+                              onClick={() => openEditModal(prod)}
+                              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-450 rounded-lg transition-colors cursor-pointer"
+                              title={isAdmin ? "Modifier Stock / Prix" : "Modifier Arrivage"}
+                            >
+                              <Edit3 size={13} />
+                            </button>
+                            {isAdmin && (
                               <button
                                 onClick={() => triggerDeleteProduct(prod.id)}
                                 className="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded-lg transition-colors cursor-pointer"
-                                title="Supprimer du catalogue"
+                                title="Supprimer le produit"
                               >
                                 <Trash2 size={13} />
                               </button>
-                            </div>
-                          </td>
-                        )}
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))
                   ) : (
@@ -838,7 +870,7 @@ export default function StockPage() {
                   <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Sélectionner le Produit</label>
                   <select
                     value={incomingProductId}
-                    onChange={e => setIncomingProductId(e.target.value)}
+                    onChange={e => handleIncomingProductChange(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 cursor-pointer"
                   >
                     <option value="" disabled>-- Choisir un produit --</option>
@@ -848,18 +880,43 @@ export default function StockPage() {
                   </select>
                 </div>
 
-                {/* Quantity & Supplier */}
+                {/* Montant Total & Prix Unitaire */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Quantité Livrée (pièces)</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Montant Total (FCFA)</label>
                     <input
                       type="number"
                       required
-                      min={1}
-                      value={incomingQty || ''}
-                      onChange={e => setIncomingQty(Number(e.target.value))}
-                      placeholder="Ex: 50"
-                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500"
+                      min={0}
+                      value={incomingTotalVal || ''}
+                      onChange={e => updateIncomingTotalVal(Number(e.target.value))}
+                      placeholder="Ex: 50000"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-650 text-sm focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Prix Unitaire (FCFA)</label>
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      value={incomingUnitPrice || ''}
+                      onChange={e => updateIncomingUnitPrice(Number(e.target.value))}
+                      placeholder="Ex: 1000"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-650 text-sm focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Quantité Calculée & Fournisseur */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Quantité (pièces)</label>
+                    <input
+                      type="number"
+                      disabled
+                      value={incomingQty || 0}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-400 text-sm focus:outline-none disabled:opacity-75 font-bold"
                     />
                   </div>
                   <div>

@@ -42,6 +42,7 @@ export default function VentesPage() {
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState<number>(0);
   const [unitPrice, setUnitPrice] = useState<number>(0);
+  const [totalAmountState, setTotalAmountState] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'Espèces' | 'Mobile Money' | 'Carte' | 'Autre'>('Espèces');
   const [saleDate, setSaleDate] = useState('');
   const [error, setError] = useState('');
@@ -69,6 +70,7 @@ export default function VentesPage() {
       setUnitPrice(0);
     }
     setQuantity(0);
+    setTotalAmountState(0);
     setPaymentMethod('Espèces');
     setSaleDate(new Date().toISOString().split('T')[0]);
     setError('');
@@ -82,6 +84,7 @@ export default function VentesPage() {
     setProductId(sale.productId);
     setQuantity(sale.quantity);
     setUnitPrice(sale.unitPrice);
+    setTotalAmountState(sale.quantity * sale.unitPrice);
     setPaymentMethod(sale.paymentMethod);
     setSaleDate(sale.createdAt.split('T')[0]);
     setError('');
@@ -106,11 +109,28 @@ export default function VentesPage() {
     }
   };
 
+  const updateVenteTotalAmount = (total: number) => {
+    setTotalAmountState(total);
+    if (unitPrice > 0) {
+      setQuantity(Math.floor(total / unitPrice));
+    }
+  };
+
+  const updateVenteUnitPrice = (price: number) => {
+    setUnitPrice(price);
+    if (price > 0 && totalAmountState > 0) {
+      setQuantity(Math.floor(totalAmountState / price));
+    }
+  };
+
   const handleProductChange = (prodId: string) => {
     setProductId(prodId);
     const prod = products.find(p => p.id === prodId);
     if (prod) {
       setUnitPrice(prod.unitPrice);
+      if (totalAmountState > 0 && prod.unitPrice > 0) {
+        setQuantity(Math.floor(totalAmountState / prod.unitPrice));
+      }
     }
   };
 
@@ -417,8 +437,21 @@ export default function VentesPage() {
                   </select>
                 </div>
 
-                {/* Price and quantity inputs in row */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Price, total amount and quantity inputs in grid */}
+                <div className="grid grid-cols-3 gap-3">
+                  {/* Total Amount */}
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Montant Total (FCFA)</label>
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      value={totalAmountState || ''}
+                      onChange={e => updateVenteTotalAmount(Number(e.target.value))}
+                      placeholder="Ex: 15000"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-650 text-sm focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
                   {/* Unit Price */}
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Prix Unitaire (FCFA)</label>
@@ -427,22 +460,19 @@ export default function VentesPage() {
                       required
                       min={1}
                       value={unitPrice || ''}
-                      onChange={e => setUnitPrice(Number(e.target.value))}
+                      onChange={e => updateVenteUnitPrice(Number(e.target.value))}
                       placeholder="Ex: 3500"
-                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-650 text-sm focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                   {/* Quantity */}
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Quantité Vendue (pièces)</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Qté (pièces)</label>
                     <input
                       type="number"
-                      required
-                      min={1}
-                      value={quantity || ''}
-                      onChange={e => setQuantity(Number(e.target.value))}
-                      placeholder="Ex: 5"
-                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500"
+                      disabled
+                      value={quantity || 0}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-400 text-sm focus:outline-none disabled:opacity-75 font-bold"
                     />
                   </div>
                 </div>

@@ -1691,7 +1691,7 @@ export class LocalDbStore {
     this.addActivityLog('Suppression Catalogue', `Produit ${pName} supprimé du catalogue.`, userName);
   }
 
-  static addStockIncoming(productId: string, quantityAdded: number, supplierId: string, notes: string, userName: string, customDate?: string): Product {
+  static addStockIncoming(productId: string, quantityAdded: number, supplierId: string, notes: string, userName: string, customDate?: string, newUnitPrice?: number): Product {
     const products = getLocalStorageData('boucherie_products', MOCK_PRODUCTS);
     const index = products.findIndex(p => p.id === productId);
     if (index === -1) throw new Error('Produit non trouvé dans le stock.');
@@ -1700,6 +1700,9 @@ export class LocalDbStore {
     product.quantity += quantityAdded;
     if (supplierId) {
       product.supplierId = supplierId;
+    }
+    if (newUnitPrice && newUnitPrice > 0) {
+      product.unitPrice = newUnitPrice;
     }
     const dateStr = customDate || new Date().toISOString();
     product.updatedAt = new Date().toISOString();
