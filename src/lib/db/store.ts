@@ -287,17 +287,25 @@ export class LocalDbStore {
   static async syncToSupabase(table: string, action: 'insert' | 'update' | 'delete' | 'upsert', record: any): Promise<void> {
     if (!isSupabaseConfigured() || !supabase) return;
     try {
+      // Map JS camelCase object to Supabase snake_case fields
       const snakeRecord: any = {};
       for (const key of Object.keys(record)) {
-        if (['supplierName', 'productName', 'employeeName'].includes(key)) continue;
-        
-        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-        
         if (key === 'workingDays' && Array.isArray(record[key])) {
           snakeRecord.working_days = record[key];
         } else {
+          const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
           snakeRecord[snakeKey] = record[key];
         }
+      }
+
+      // Remove frontend-only display fields that do not exist as DB columns
+      delete snakeRecord.product_name;
+      delete snakeRecord.supplier_name;
+      delete snakeRecord.employee_name;
+
+      // Remove GENERATED ALWAYS columns that PostgreSQL rejects on insert/update
+      if (table === 'sales' || table === 'outputs') {
+        delete snakeRecord.total_amount;
       }
 
       if (action === 'insert') {
@@ -350,20 +358,10 @@ export class LocalDbStore {
         supabase.from('profiles').select('*')
       ]);
 
-      if (rSuppliers.data) {
-        const suppliers = rSuppliers.data.map((s) => ({
-          id: s.id,
-          name: s.name,
-          phone: s.phone,
-          address: s.address || '',
-          notes: s.notes || '',
-          createdAt: s.created_at
-        }));
-        setLocalStorageData('boucherie_suppliers', suppliers);
-      }
-
+      // 1. Load basic entities list to resolve names
+      let productsList: any[] = [];
       if (rProducts.data) {
-        const products = rProducts.data.map((p) => ({
+        productsList = rProducts.data.map((p) => ({
           id: p.id,
           name: p.name,
           category: p.category,
@@ -374,14 +372,50 @@ export class LocalDbStore {
           createdAt: p.created_at,
           updatedAt: p.updated_at
         }));
-        setLocalStorageData('boucherie_products', products);
+        setLocalStorageData('boucherie_products', productsList);
+      } else {
+        productsList = getLocalStorageData('boucherie_products', MOCK_PRODUCTS);
       }
 
+      let suppliersList: any[] = [];
+      if (rSuppliers.data) {
+        suppliersList = rSuppliers.data.map((s) => ({
+          id: s.id,
+          name: s.name,
+          phone: s.phone,
+          address: s.address || '',
+          notes: s.notes || '',
+          createdAt: s.created_at
+        }));
+        setLocalStorageData('boucherie_suppliers', suppliersList);
+      } else {
+        suppliersList = getLocalStorageData('boucherie_suppliers', MOCK_SUPPLIERS);
+      }
+
+      let employeesList: any[] = [];
+      if (rEmployees.data) {
+        employeesList = rEmployees.data.map((e) => ({
+          id: e.id,
+          firstName: e.first_name,
+          lastName: e.last_name,
+          phone: e.phone,
+          hireDate: e.hire_date,
+          position: e.position,
+          active: e.active,
+          workingDays: Array.isArray(e.working_days) ? e.working_days : [true, true, true, true, true, true, true],
+          createdAt: e.created_at
+        }));
+        setLocalStorageData('boucherie_employees', employeesList);
+      } else {
+        employeesList = getLocalStorageData('boucherie_employees', MOCK_EMPLOYEES);
+      }
+
+      // 2. Resolve relationships when mapping transactions
       if (rSales.data) {
         const sales = rSales.data.map((s) => ({
           id: s.id,
           productId: s.product_id,
-          productName: '',
+          productName: productsList.find(p => p.id === s.product_id)?.name || 'Produit Inconnu',
           quantity: Number(s.quantity),
           unitPrice: Number(s.unit_price),
           totalAmount: Number(s.total_amount),
@@ -409,7 +443,7 @@ export class LocalDbStore {
         const outputs = rOutputs.data.map((o) => ({
           id: o.id,
           productId: o.product_id,
-          productName: '',
+          productName: productsList.find(p => p.id === o.product_id)?.name || 'Produit Inconnu',
           quantity: Number(o.quantity),
           unitPrice: Number(o.unit_price),
           totalAmount: Number(o.total_amount),
@@ -428,7 +462,7 @@ export class LocalDbStore {
         const restants = rStockRestant.data.map((sr) => ({
           id: sr.id,
           productId: sr.product_id,
-          productName: '',
+          productName: productsList.find(p => p.id === sr.product_id)?.name || 'Produit Inconnu',
           quantity: Number(sr.quantity),
           totalValue: Number(sr.total_value),
           paymentMethod: sr.payment_method,
@@ -442,7 +476,7 @@ export class LocalDbStore {
         const debts = rDebts.data.map((d) => ({
           id: d.id,
           supplierId: d.supplier_id,
-          supplierName: '',
+          supplierName: suppliersList.find(s => s.id === d.supplier_id)?.name || 'Fournisseur Inconnu',
           totalAmount: Number(d.total_amount),
           paidAmount: Number(d.paid_amount),
           remainingAmount: Number(d.remaining_amount),
@@ -464,26 +498,13 @@ export class LocalDbStore {
         setLocalStorageData('boucherie_debt_payments', debtPayments);
       }
 
-      if (rEmployees.data) {
-        const employees = rEmployees.data.map((e) => ({
-          id: e.id,
-          firstName: e.first_name,
-          lastName: e.last_name,
-          phone: e.phone,
-          hireDate: e.hire_date,
-          position: e.position,
-          active: e.active,
-          workingDays: Array.isArray(e.working_days) ? e.working_days : [true, true, true, true, true, true, true],
-          createdAt: e.created_at
-        }));
-        setLocalStorageData('boucherie_employees', employees);
-      }
-
       if (rSalaries.data) {
         const salaries = rSalaries.data.map((s) => ({
           id: s.id,
           employeeId: s.employee_id,
-          employeeName: '',
+          employeeName: employeesList.find(e => e.id === s.employee_id)
+            ? `${employeesList.find(e => e.id === s.employee_id)?.firstName} ${employeesList.find(e => e.id === s.employee_id)?.lastName}`
+            : 'Employé Inconnu',
           dailyWage: Number(s.daily_wage),
           amountPaid: Number(s.amount_paid),
           status: s.status,
