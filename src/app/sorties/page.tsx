@@ -38,12 +38,13 @@ export default function SortiesPage() {
   const [totalValue, setTotalValue] = useState<number>(0);
   const [notes, setNotes] = useState('');
   const [sortieDate, setSortieDate] = useState('');
+  const [employeeName, setEmployeeName] = useState('');
   const [error, setError] = useState('');
 
   // Validation Modal State
   const [isValidatingModalOpen, setIsValidatingModalOpen] = useState(false);
   const [validatingOutput, setValidatingOutput] = useState<Output | null>(null);
-  const [remainingQty, setRemainingQty] = useState<number>(0);
+  const [remainingQty, setRemainingQty] = useState<number | ''>(0);
   const [paymentMethod, setPaymentMethod] = useState<'Espèces' | 'Mobile Money' | 'Carte' | 'Autre'>('Espèces');
 
   // Confirm dialog state
@@ -73,6 +74,7 @@ export default function SortiesPage() {
     setTotalValue(0);
     setNotes('');
     setSortieDate(new Date().toISOString().split('T')[0]);
+    setEmployeeName(user?.fullName || '');
     setError('');
     setIsModalOpen(true);
   };
@@ -85,6 +87,7 @@ export default function SortiesPage() {
     setTotalValue(output.quantity * output.unitPrice);
     setNotes(output.notes);
     setSortieDate(output.createdAt.split('T')[0]);
+    setEmployeeName(output.employeeName);
     setError('');
     setIsModalOpen(true);
   };
@@ -103,6 +106,10 @@ export default function SortiesPage() {
 
     if (!validatingOutput) return;
 
+    if (remainingQty === '') {
+      setError('Veuillez saisir la quantité restante.');
+      return;
+    }
     if (remainingQty < 0) {
       setError('La quantité restante ne peut pas être négative.');
       return;
@@ -154,6 +161,7 @@ export default function SortiesPage() {
     }
 
     const userName = user?.fullName || 'Utilisateur';
+    const finalEmployeeName = employeeName || userName;
 
     try {
       if (editingOutput) {
@@ -163,14 +171,15 @@ export default function SortiesPage() {
           notes,
           userName,
           editingOutput.status === 'valide' ? editingOutput.remainingQuantity : undefined,
-          editingOutput.status === 'valide' ? editingOutput.paymentMethod : undefined
+          editingOutput.status === 'valide' ? editingOutput.paymentMethod : undefined,
+          employeeName
         );
       } else {
         const payload = {
           productId,
           quantity,
           unitPrice: selectedProduct.unitPrice,
-          employeeName: userName,
+          employeeName: finalEmployeeName,
           notes,
           createdAt: sortieDate ? new Date(sortieDate + 'T12:00:00Z').toISOString() : undefined
         };
@@ -220,6 +229,30 @@ export default function SortiesPage() {
   const displayAvailableQty = selectedProduct 
     ? selectedProduct.quantity + (editingOutput && editingOutput.productId === productId ? editingOutput.quantity : 0)
     : 0;
+
+  // Helper to determine day of week index (0 = Monday, ..., 6 = Sunday)
+  const getDayOfWeekIndex = (dateStr: string) => {
+    if (!dateStr) return -1;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    const dayOfWeek = date.getDay();
+    return (dayOfWeek + 6) % 7;
+  };
+
+  // Get employee candidates for the selected date
+  const dayIndex = getDayOfWeekIndex(sortieDate);
+  const activeAccounts = LocalDbStore.getAccounts()
+    .filter(acc => acc.status === 'active')
+    .map(acc => acc.fullName);
+  const allEmployees = LocalDbStore.getEmployees();
+  const activeEmployeesToday = allEmployees
+    .filter(emp => emp.active && (dayIndex === -1 || emp.workingDays[dayIndex]))
+    .map(emp => `${emp.firstName} ${emp.lastName}`);
+
+  const employeeCandidates = Array.from(new Set([...activeAccounts, ...activeEmployeesToday]));
+  if (employeeName && !employeeCandidates.includes(employeeName)) {
+    employeeCandidates.push(employeeName);
+  }
 
   return (
     <div className="space-y-6 select-none">
@@ -501,6 +534,24 @@ export default function SortiesPage() {
                   />
                 </div>
 
+                {/* Sélectionner l'Employé */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Employé concerné</label>
+                  <select
+                    value={employeeName}
+                    onChange={e => setEmployeeName(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-rose-500 cursor-pointer"
+                  >
+                    <option value="" disabled>-- Choisir un employé --</option>
+                    {employeeCandidates.map(name => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Date de sortie */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Date de la Sortie</label>
@@ -587,8 +638,8 @@ export default function SortiesPage() {
                       required
                       min={0}
                       max={validatingOutput.quantity}
-                      value={remainingQty || ''}
-                      onChange={e => setRemainingQty(Number(e.target.value))}
+                      value={remainingQty}
+                      onChange={e => setRemainingQty(e.target.value === '' ? '' : Number(e.target.value))}
                       placeholder="Ex: 2"
                       className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-650 text-sm focus:outline-none focus:border-emerald-500"
                     />
@@ -597,14 +648,14 @@ export default function SortiesPage() {
                     </span>
                   </div>
 
-                  {remainingQty <= validatingOutput.quantity && (
+                  {remainingQty !== '' && remainingQty <= validatingOutput.quantity && (
                     <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-850 flex justify-between items-center text-xs">
                       <span className="text-slate-500 uppercase font-bold tracking-wider text-[10px]">Quantité vendue (calculée)</span>
                       <span className="font-extrabold text-emerald-400">{validatingOutput.quantity - remainingQty} pièces</span>
                     </div>
                   )}
 
-                  {remainingQty <= validatingOutput.quantity && (
+                  {remainingQty !== '' && remainingQty <= validatingOutput.quantity && (
                     <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-850 flex justify-between items-center text-xs">
                       <span className="text-slate-500 uppercase font-bold tracking-wider text-[10px]">Chiffre d'affaires estimé</span>
                       <span className="font-extrabold text-emerald-450">{formatFCFA((validatingOutput.quantity - remainingQty) * validatingOutput.unitPrice)}</span>

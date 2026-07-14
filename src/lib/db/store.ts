@@ -958,6 +958,7 @@ export class LocalDbStore {
     }
 
     setLocalStorageData('boucherie_outputs', outputs);
+    this.syncToSupabase('outputs', 'update', output);
     this.addActivityLog('Clôture Sortie', `Sortie ${output.productName} clôturée : ${soldQty} vendus, ${remainingQuantity} retournés au frigo.`, userName);
     this.recalculateCaisseForDate(output.createdAt.split('T')[0]);
 
@@ -1002,12 +1003,13 @@ export class LocalDbStore {
     // 3. Remove output record
     const updatedOutputs = outputs.filter(o => o.id !== id);
     setLocalStorageData('boucherie_outputs', updatedOutputs);
+    this.syncToSupabase('outputs', 'delete', { id });
 
     this.addActivityLog('Annulation Sortie', `Sortie de ${output.quantity} ${output.productName} annulée.`, userName);
     this.recalculateCaisseForDate(dateStr);
   }
 
-  static updateOutput(id: string, newQty: number, notes: string, userName: string, newRemainingQty?: number, paymentMethod?: Sale['paymentMethod']) {
+  static updateOutput(id: string, newQty: number, notes: string, userName: string, newRemainingQty?: number, paymentMethod?: Sale['paymentMethod'], employeeName?: string) {
     const outputs = getLocalStorageData<Output[]>('boucherie_outputs', MOCK_OUTPUTS);
     const index = outputs.findIndex(o => o.id === id);
     if (index === -1) throw new Error('Sortie introuvable.');
@@ -1063,6 +1065,9 @@ export class LocalDbStore {
     // Update basic info
     output.quantity = newQty;
     output.notes = notes;
+    if (employeeName) {
+      output.employeeName = employeeName;
+    }
 
     // 3. If remaining quantity is provided, re-validate
     if (newRemainingQty !== undefined) {
@@ -1112,6 +1117,7 @@ export class LocalDbStore {
     }
 
     setLocalStorageData('boucherie_outputs', outputs);
+    this.syncToSupabase('outputs', 'update', output);
     this.addActivityLog('Modification Sortie', `Sortie ID ${id} modifiée par ${userName}.`, userName);
     this.recalculateCaisseForDate(dateStr);
   }
