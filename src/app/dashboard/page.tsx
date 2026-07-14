@@ -154,8 +154,8 @@ export default function DashboardPage() {
   const totalRemainingDebts = debts.reduce((acc, d) => acc + d.remainingAmount, 0);
 
   // Net Profit (Admin only)
-  // net_profit = Stock + Sales + Stock Restant - Pertes - Expenses - Salaries - Debts
-  const netProfit = totalStockValue + dailyCA + dailyStockRestantVal - dailyLosses - dailyExpenses - dailySalaries - totalRemainingDebts;
+  // net_profit = Stock + Sales - Pertes - Expenses - Salaries - Debts
+  const netProfit = totalStockValue + dailyCA - dailyLosses - dailyExpenses - dailySalaries - totalRemainingDebts;
 
   // Active employees on the selected date
   const jsDay = new Date(filterDateStr).getDay(); // 0 is Sunday, 1 is Monday...
@@ -415,9 +415,9 @@ export default function DashboardPage() {
                 <PiggyBank size={22} />
               </div>
             </div>
-            <div className="text-[10px] text-emerald-450/80 font-medium mt-3">
-              Calculé : Stock + Ventes + Stock Restant - Pertes - Dépenses - Salaires - Dettes
-            </div>
+             <div className="text-[10px] text-emerald-455/80 font-medium mt-3">
+               Calculé : Stock + Ventes - Pertes - Dépenses - Salaires - Dettes
+             </div>
           </motion.div>
         ) : (
           <motion.div variants={itemVariants} className="bg-slate-900 border border-slate-850 p-5 rounded-3xl relative overflow-hidden flex flex-col justify-between min-h-[120px]">
