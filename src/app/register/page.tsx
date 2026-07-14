@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LocalDbStore } from '@/lib/db/store';
 import { motion } from 'framer-motion';
+import { supabase, isSupabaseConfigured } from '@/lib/db/client';
 import { 
   Boxes, 
   User, 
@@ -67,7 +68,46 @@ export default function RegisterPage() {
         status: 'pending' as const
       };
 
-      await LocalDbStore.registerAccount(payload);
+      if (isSupabaseConfigured() && supabase) {
+        // Sign up with Supabase Auth
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              phone: phone,
+              role: 'vendeur'
+            }
+          }
+        });
+        
+        if (signUpError) {
+          throw new Error(signUpError.message);
+        }
+
+        if (signUpData.user) {
+          // Manually create the profile in profiles table
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: signUpData.user.id,
+              email,
+              role: 'vendeur',
+              full_name: fullName,
+              phone: phone,
+              status: 'pending'
+            });
+            
+          if (profileError) {
+            throw new Error(profileError.message);
+          }
+        }
+      } else {
+        // Local fallback
+        await LocalDbStore.registerAccount(payload);
+      }
+
       setRegisteredPending(true);
     } catch (err: any) {
       setError(err.message || "Erreur lors de la création du compte. L'adresse email est peut-être déjà prise.");
