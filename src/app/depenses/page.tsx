@@ -20,6 +20,7 @@ import {
 
 export default function DepensesPage() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [expenses, setExpenses] = useState<Expense[]>([]);
 
   // Search/Filters State
@@ -306,12 +307,13 @@ export default function DepensesPage() {
                 <th className="py-4 px-6 w-10">
                   <input
                     type="checkbox"
+                    disabled={!isAdmin}
                     checked={
                       filteredExpenses.filter(ex => ex.category !== 'Salaires').length > 0 &&
                       selectedIds.length === filteredExpenses.filter(ex => ex.category !== 'Salaires').length
                     }
                     onChange={handleSelectAll}
-                    className="rounded border-slate-850 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4"
+                    className="rounded border-slate-850 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4 disabled:opacity-30 disabled:cursor-not-allowed"
                   />
                 </th>
                 <th className="py-4 px-6">Date & Heure</th>
@@ -329,7 +331,7 @@ export default function DepensesPage() {
                     <td className="py-4 px-6 w-10">
                       <input
                         type="checkbox"
-                        disabled={exp.category === 'Salaires'}
+                        disabled={!isAdmin || exp.category === 'Salaires'}
                         checked={selectedIds.includes(exp.id)}
                         onChange={() => handleSelectRow(exp.id)}
                         className="rounded border-slate-850 text-emerald-500 focus:ring-emerald-500 bg-slate-950 cursor-pointer h-4 w-4 disabled:opacity-30 disabled:cursor-not-allowed"
@@ -355,17 +357,17 @@ export default function DepensesPage() {
                       <div className="flex justify-center items-center space-x-2">
                         <button
                           onClick={() => handleEditClick(exp)}
-                          disabled={exp.category === 'Salaires'} // Do not modify wage payments directly to prevent registry errors
+                          disabled={!isAdmin || exp.category === 'Salaires'} // Do not modify wage payments directly to prevent registry errors
                           className="p-1.5 bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Modifier la dépense"
+                          title={!isAdmin ? "Seul l'administrateur peut modifier une dépense" : "Modifier la dépense"}
                         >
                           <Edit size={12} />
                         </button>
                         <button
                           onClick={() => handleDeleteClick(exp.id)}
-                          disabled={exp.category === 'Salaires'}
+                          disabled={!isAdmin || exp.category === 'Salaires'}
                           className="p-1.5 bg-rose-955/20 hover:bg-rose-900/40 text-rose-455 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Supprimer la dépense"
+                          title={!isAdmin ? "Seul l'administrateur peut supprimer une dépense" : "Supprimer la dépense"}
                         >
                           <Trash2 size={12} />
                         </button>

@@ -1308,7 +1308,7 @@ export class LocalDbStore {
     const expenses = this.getExpenses();
     const newExpense: Expense = {
       ...expense,
-      id: 'exp-' + Date.now(),
+      id: generateId('exp'),
       createdAt: expense.createdAt || new Date().toISOString()
     };
     expenses.push(newExpense);
