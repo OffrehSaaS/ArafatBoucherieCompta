@@ -1663,8 +1663,9 @@ export class LocalDbStore {
   static updateStartingCash(date: string, amount: number, userName: string) {
     const registries = this.getCashRegistries();
     const index = registries.findIndex(r => r.date === date);
+    let targetReg: CashRegistry;
     if (index === -1) {
-      const newReg: CashRegistry = {
+      targetReg = {
         id: generateId('cash'),
         date,
         startingCash: amount,
@@ -1674,14 +1675,16 @@ export class LocalDbStore {
         endingCash: amount,
         createdAt: new Date().toISOString()
       };
-      registries.push(newReg);
+      registries.push(targetReg);
     } else {
-      const reg = registries[index];
-      reg.startingCash = amount;
-      reg.endingCash = amount + reg.salesTotal - reg.expensesTotal - reg.salariesTotal;
+      targetReg = registries[index];
+      targetReg.startingCash = amount;
+      targetReg.endingCash = amount + targetReg.salesTotal - targetReg.expensesTotal - targetReg.salariesTotal;
     }
     setLocalStorageData('boucherie_cash_registries', registries);
+    this.syncToSupabase('cash_registry', 'upsert', targetReg);
     this.addActivityLog('Caisse Départ', `Caisse de départ du ${date} modifiée à ${amount} FCFA par l'admin.`, userName);
+    this.recalculateCaisseForToday();
   }
 
   static deleteProduct(id: string, userName: string) {

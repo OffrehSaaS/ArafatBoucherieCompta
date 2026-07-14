@@ -268,7 +268,7 @@ export default function CaissePage() {
                     type="number"
                     required
                     min={0}
-                    value={startingCash || ''}
+                    value={startingCash === 0 ? '0' : (startingCash || '')}
                     onChange={e => setStartingCash(Number(e.target.value))}
                     placeholder="Ex: 150000"
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500"
