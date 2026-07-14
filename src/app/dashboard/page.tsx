@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { LocalDbStore, Product, Sale, Expense, Output, Debt, Employee, CashRegistry, ActivityLog, UserAccount, StockRestant } from '@/lib/db/store';
 import { formatFCFA } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { supabase, isSupabaseConfigured } from '@/lib/db/client';
 import {
   TrendingUp,
   Wallet,
@@ -19,7 +20,8 @@ import {
   TrendingDown,
   Target,
   CircleDollarSign,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react';
 import {
   AreaChart,
@@ -39,6 +41,7 @@ import {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [mounted, setMounted] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
 
@@ -53,10 +56,10 @@ export default function DashboardPage() {
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [stockRestants, setStockRestants] = useState<StockRestant[]>([]);
 
-  // Config States
   const [butcheryName, setButcheryName] = useState('Boucherie Arafat');
   const [dailyTarget, setDailyTarget] = useState<number>(250000);
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
+  const [newRegistrationToast, setNewRegistrationToast] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -92,7 +95,42 @@ export default function DashboardPage() {
       .catch(err => {
         console.error("Dashboard mount sync error:", err);
       });
-  }, []);
+
+    // Realtime subscription for admin notifications when accounts are registered
+    let channel: any = null;
+    if (isAdmin && isSupabaseConfigured() && supabase) {
+      channel = supabase
+        .channel('dashboard-profiles-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'profiles'
+          },
+          (payload) => {
+            console.log('Realtime profile change in dashboard:', payload);
+            LocalDbStore.syncFromSupabase()
+              .then(() => {
+                loadLocal();
+                const newProfile = payload.new;
+                setNewRegistrationToast(`Nouveau vendeur enregistré : ${newProfile.full_name || newProfile.email}`);
+                // Auto-dismiss toast after 8 seconds
+                setTimeout(() => {
+                  setNewRegistrationToast(null);
+                }, 8000);
+              });
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      if (channel && supabase) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [isAdmin]);
 
   const handleApproveAccount = (accountId: string) => {
     try {
@@ -242,8 +280,6 @@ export default function DashboardPage() {
     hidden: { opacity: 0, y: 15 },
     show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 100 } }
   };
-
-  const isAdmin = user?.role === 'admin';
 
   return (
     <div className="space-y-8 select-none">
@@ -745,6 +781,32 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Realtime Toast Notification */}
+      <AnimatePresence>
+        {newRegistrationToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            className="fixed top-6 right-6 z-50 max-w-md bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl shadow-2xl flex items-center space-x-3 backdrop-blur-md"
+          >
+            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
+              <UserCheck size={18} className="animate-bounce" />
+            </div>
+            <div className="flex-1 text-xs">
+              <p className="font-extrabold text-white">Nouvelle Demande d'Accès</p>
+              <p className="text-slate-350 font-light mt-0.5">{newRegistrationToast}</p>
+            </div>
+            <button
+              onClick={() => setNewRegistrationToast(null)}
+              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

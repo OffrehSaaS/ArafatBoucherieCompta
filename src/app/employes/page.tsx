@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { LocalDbStore, Employee, UserAccount } from '@/lib/db/store';
+import { supabase, isSupabaseConfigured } from '@/lib/db/client';
 import { formatDate } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -62,9 +63,47 @@ export default function EmployesPage() {
   const weekdays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
   useEffect(() => {
-    if (isAdmin) {
-      loadData();
+    if (!isAdmin) return;
+
+    loadData();
+
+    // Perform initial background sync from Supabase
+    LocalDbStore.syncFromSupabase()
+      .then(() => {
+        loadData();
+      })
+      .catch(err => {
+        console.error("Employes mount sync error:", err);
+      });
+
+    // Realtime subscription for admin account list updates
+    let channel: any = null;
+    if (isSupabaseConfigured() && supabase) {
+      channel = supabase
+        .channel('employes-profiles-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'profiles'
+          },
+          (payload) => {
+            console.log('Realtime profile change in employes:', payload);
+            LocalDbStore.syncFromSupabase()
+              .then(() => {
+                loadData();
+              });
+          }
+        )
+        .subscribe();
     }
+
+    return () => {
+      if (channel && supabase) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [isAdmin]);
 
   const loadData = () => {
