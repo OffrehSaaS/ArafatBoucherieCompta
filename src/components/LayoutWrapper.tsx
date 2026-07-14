@@ -54,12 +54,14 @@ export const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <div className="min-h-screen bg-slate-950 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Sidebar navigation */}
-      <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+      <div className="print:hidden">
+        <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+      </div>
 
       {/* Main Content Area */}
-      <div className="md:pl-64 transition-all duration-300">
+      <div className="md:pl-64 transition-all duration-300 print:pl-0">
         {/* Mobile Header Bar */}
-        <header className="md:hidden flex items-center justify-between px-4 h-16 bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-20 shadow-md">
+        <header className="md:hidden flex items-center justify-between px-4 h-16 bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-20 shadow-md print:hidden">
           <button
             onClick={() => setMobileOpen(true)}
             className="p-2 rounded-lg hover:bg-slate-800 text-slate-350 hover:text-white transition-colors"
@@ -84,7 +86,7 @@ export const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ childre
         </header>
 
         {/* Content Wrapper */}
-        <main className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto">
+        <main className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto print:p-0 print:max-w-none">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

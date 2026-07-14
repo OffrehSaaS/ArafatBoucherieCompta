@@ -187,19 +187,16 @@ export default function RapportsPage() {
       ['Bénéfice Net', netBenefit]
     ];
 
-    let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
-    csvContent += headers.join(';') + '\r\n';
-    rows.forEach(row => {
-      csvContent += row.join(';') + '\r\n';
-    });
-
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + headers.join(';') + '\r\n' + rows.map(row => row.join(';')).join('\r\n') + '\r\n';
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.href = url;
     link.setAttribute('download', `Rapport_${period}_BoucherieArafat.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -215,17 +212,17 @@ export default function RapportsPage() {
         </div>
 
         {/* Buttons */}
-        <div className="flex space-x-3">
+        <div className="flex flex-wrap gap-2.5 sm:space-x-3 sm:gap-0 w-full sm:w-auto">
           <button
             onClick={handleExportCSV}
-            className="flex items-center justify-center space-x-2 px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white rounded-2xl font-bold cursor-pointer transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white rounded-2xl font-bold cursor-pointer transition-colors shrink-0 whitespace-nowrap"
           >
             <FileSpreadsheet size={18} className="text-emerald-450" />
             <span>Excel (CSV)</span>
           </button>
           <button
             onClick={handlePrint}
-            className="flex items-center justify-center space-x-2 px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl font-bold cursor-pointer transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl font-bold cursor-pointer transition-colors shrink-0 whitespace-nowrap"
           >
             <Printer size={18} />
             <span>Imprimer PDF</span>
@@ -243,12 +240,12 @@ export default function RapportsPage() {
       </div>
 
       {/* Tabs (Day, Week, Month, Year) */}
-      <div className="flex border-b border-slate-800 print:hidden justify-between sm:justify-start">
+      <div className="flex border-b border-slate-800 print:hidden justify-start overflow-x-auto scrollbar-none whitespace-nowrap">
         {['day', 'week', 'month', 'year'].map(tab => (
           <button
             key={tab}
             onClick={() => setPeriod(tab as any)}
-            className={`py-3 px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
+            className={`py-3 px-4 sm:px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all shrink-0 ${
               period === tab
                 ? 'border-emerald-500 text-emerald-400'
                 : 'border-transparent text-slate-500 hover:text-slate-350'

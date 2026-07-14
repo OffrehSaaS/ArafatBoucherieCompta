@@ -85,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
   };
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-slate-900 text-slate-100 dark:bg-slate-950 border-r border-slate-800">
+    <div className="flex flex-col h-full bg-slate-900 text-slate-400 dark:bg-slate-950 border-r border-slate-800">
       {/* Brand Header */}
       <div className="flex items-center justify-between p-4 border-b border-slate-850 h-16">
         <div className="flex items-center space-x-2">
