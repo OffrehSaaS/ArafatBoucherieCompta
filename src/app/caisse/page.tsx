@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { LocalDbStore, CashRegistry } from '@/lib/db/store';
+import { LocalDbStore, CashRegistry, Product, Debt, Expense } from '@/lib/db/store';
 import { formatFCFA, formatDate } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -24,6 +24,9 @@ export default function CaissePage() {
   const isAdmin = user?.role === 'admin';
 
   const [registries, setRegistries] = useState<CashRegistry[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
 
   // Search/Filters State
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,6 +47,9 @@ export default function CaissePage() {
     // Recalculate today's caisse on page load to ensure accuracy
     LocalDbStore.recalculateCaisseForToday();
     setRegistries(LocalDbStore.getCashRegistries().sort((a,b) => b.date.localeCompare(a.date)));
+    setProducts(LocalDbStore.getProducts());
+    setDebts(LocalDbStore.getDebts());
+    setExpenses(LocalDbStore.getExpenses());
     setDate(new Date().toISOString().split('T')[0]);
   };
 
@@ -125,6 +131,12 @@ export default function CaissePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filteredRegistries.map(reg => {
           const isToday = reg.date === new Date().toISOString().split('T')[0];
+          
+          // Calculations for additional metrics
+          const regExpensesRaw = expenses.filter(e => e.createdAt.startsWith(reg.date));
+          const lossesTotal = regExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
+          const totalStockVal = products.reduce((acc, p) => acc + (p.quantity * p.unitPrice), 0);
+          const totalRemainingDebts = debts.reduce((acc, d) => acc + d.remainingAmount, 0);
 
           return (
             <div 
@@ -146,38 +158,62 @@ export default function CaissePage() {
                     Clôture du {formatDate(reg.date)}
                   </h4>
                   <p className="text-[10px] text-slate-500">Généré le {new Date(reg.createdAt).toLocaleDateString()}</p>
-                </div>
-
-                {/* Calculations Row */}
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  {/* Depart */}
-                  <div className="bg-slate-950 p-3 rounded-2xl border border-slate-850">
-                    <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Caisse de Départ</p>
-                    <p className="text-white font-extrabold mt-1">{formatFCFA(reg.startingCash)}</p>
-                  </div>
-                  {/* Ventes */}
-                  <div className="bg-slate-950 p-3 rounded-2xl border border-slate-850 flex items-center justify-between">
-                    <div>
-                      <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Ventes (+)</p>
-                      <p className="text-emerald-400 font-extrabold mt-1">+{formatFCFA(reg.salesTotal)}</p>
+                  
+                  {/* Calculations Row */}
+                  <div className="grid grid-cols-2 gap-3 text-xs mt-4">
+                    {/* Depart */}
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-850">
+                      <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Caisse de Départ</p>
+                      <p className="text-white font-extrabold mt-1">{formatFCFA(reg.startingCash)}</p>
                     </div>
-                    <PlusCircle size={16} className="text-emerald-500/30" />
-                  </div>
-                  {/* Dépenses */}
-                  <div className="bg-slate-950 p-3 rounded-2xl border border-slate-850 flex items-center justify-between">
-                    <div>
-                      <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Dépenses (-)</p>
-                      <p className="text-rose-455 font-extrabold mt-1">-{formatFCFA(reg.expensesTotal)}</p>
+                    {/* Ventes */}
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-850 flex items-center justify-between">
+                      <div>
+                        <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Ventes (+)</p>
+                        <p className="text-emerald-400 font-extrabold mt-1">+{formatFCFA(reg.salesTotal)}</p>
+                      </div>
+                      <PlusCircle size={16} className="text-emerald-500/30" />
                     </div>
-                    <MinusCircle size={16} className="text-rose-500/30" />
-                  </div>
-                  {/* Salaires */}
-                  <div className="bg-slate-950 p-3 rounded-2xl border border-slate-850 flex items-center justify-between">
-                    <div>
-                      <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Salaires (-)</p>
-                      <p className="text-rose-455 font-extrabold mt-1">-{formatFCFA(reg.salariesTotal)}</p>
+                    {/* Stock au Frigo */}
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-850 flex items-center justify-between">
+                      <div>
+                        <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Stock au Frigo (+)</p>
+                        <p className="text-emerald-400 font-extrabold mt-1">+{formatFCFA(totalStockVal)}</p>
+                      </div>
+                      <PlusCircle size={16} className="text-emerald-500/30" />
                     </div>
-                    <MinusCircle size={16} className="text-rose-500/30" />
+                    {/* Dépenses */}
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-850 flex items-center justify-between">
+                      <div>
+                        <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Dépenses (-)</p>
+                        <p className="text-rose-455 font-extrabold mt-1">-{formatFCFA(reg.expensesTotal)}</p>
+                      </div>
+                      <MinusCircle size={16} className="text-rose-500/30" />
+                    </div>
+                    {/* Salaires */}
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-850 flex items-center justify-between">
+                      <div>
+                        <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Salaires (-)</p>
+                        <p className="text-rose-455 font-extrabold mt-1">-{formatFCFA(reg.salariesTotal)}</p>
+                      </div>
+                      <MinusCircle size={16} className="text-rose-500/30" />
+                    </div>
+                    {/* Dettes Fournisseurs */}
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-850 flex items-center justify-between">
+                      <div>
+                        <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Dettes Fourn. (-)</p>
+                        <p className="text-rose-455 font-extrabold mt-1">-{formatFCFA(totalRemainingDebts)}</p>
+                      </div>
+                      <MinusCircle size={16} className="text-rose-500/30" />
+                    </div>
+                    {/* Pertes */}
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-850 flex items-center justify-between col-span-2">
+                      <div>
+                        <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">Pertes (-)</p>
+                        <p className="text-rose-455 font-extrabold mt-1">-{formatFCFA(lossesTotal)}</p>
+                      </div>
+                      <MinusCircle size={16} className="text-rose-500/30" />
+                    </div>
                   </div>
                 </div>
 

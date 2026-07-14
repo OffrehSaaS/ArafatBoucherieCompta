@@ -1607,12 +1607,19 @@ export class LocalDbStore {
     let index = registries.findIndex(r => r.date === dateStr);
 
     const sales = this.getSales().filter(s => s.createdAt.startsWith(dateStr));
-    const expenses = this.getExpenses().filter(e => e.createdAt.startsWith(dateStr) && e.category !== 'Salaires');
+    const dayExpensesRaw = this.getExpenses().filter(e => e.createdAt.startsWith(dateStr));
+    const expensesTotal = dayExpensesRaw.filter(e => e.category !== 'Salaires' && e.category !== 'Pertes').reduce((acc, e) => acc + e.amount, 0);
+    const lossesTotal = dayExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
     const salaries = this.getSalaries().filter(s => s.paidAt === dateStr);
 
     const salesTotal = sales.reduce((acc, s) => acc + s.totalAmount, 0);
-    const expensesTotal = expenses.reduce((acc, e) => acc + e.amount, 0);
     const salariesTotal = salaries.reduce((acc, s) => acc + s.amountPaid, 0);
+
+    const products = this.getProducts();
+    const stockValue = products.reduce((acc, p) => acc + (p.quantity * p.unitPrice), 0);
+
+    const debts = this.getDebts();
+    const totalRemainingDebts = debts.reduce((acc, d) => acc + d.remainingAmount, 0);
 
     let startingCash = 0;
     if (index === -1) {
@@ -1633,7 +1640,7 @@ export class LocalDbStore {
         salesTotal,
         expensesTotal,
         salariesTotal,
-        endingCash: startingCash + salesTotal - expensesTotal - salariesTotal,
+        endingCash: startingCash + salesTotal + stockValue - expensesTotal - salariesTotal - totalRemainingDebts - lossesTotal,
         createdAt: new Date().toISOString()
       };
       registries.push(newReg);
@@ -1642,16 +1649,20 @@ export class LocalDbStore {
       reg.salesTotal = salesTotal;
       reg.expensesTotal = expensesTotal;
       reg.salariesTotal = salariesTotal;
-      reg.endingCash = reg.startingCash + salesTotal - expensesTotal - salariesTotal;
+      reg.endingCash = reg.startingCash + salesTotal + stockValue - expensesTotal - salariesTotal - totalRemainingDebts - lossesTotal;
     }
 
     // Sort registries chronologically and cascade ending balance to next day's starting balance
     const sortedRegs = [...registries].sort((a, b) => a.date.localeCompare(b.date));
     for (let i = 0; i < sortedRegs.length; i++) {
+      const regDate = sortedRegs[i].date;
+      const regExpensesRaw = this.getExpenses().filter(e => e.createdAt.startsWith(regDate));
+      const regLossesTotal = regExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
+
       if (i > 0) {
         sortedRegs[i].startingCash = sortedRegs[i - 1].endingCash;
       }
-      sortedRegs[i].endingCash = sortedRegs[i].startingCash + sortedRegs[i].salesTotal - sortedRegs[i].expensesTotal - sortedRegs[i].salariesTotal;
+      sortedRegs[i].endingCash = sortedRegs[i].startingCash + sortedRegs[i].salesTotal + stockValue - sortedRegs[i].expensesTotal - sortedRegs[i].salariesTotal - totalRemainingDebts - regLossesTotal;
     }
 
     setLocalStorageData('boucherie_cash_registries', sortedRegs);
