@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { LocalDbStore, Product, Sale, Expense, Output, Debt, Employee, CashRegistry, ActivityLog, UserAccount, StockRestant } from '@/lib/db/store';
+import { LocalDbStore, Product, Sale, Expense, Output, Debt, Employee, CashRegistry, ActivityLog, UserAccount, StockRestant, Salary } from '@/lib/db/store';
 import { formatFCFA } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, isSupabaseConfigured } from '@/lib/db/client';
@@ -59,6 +59,7 @@ export default function DashboardPage() {
   const [butcheryName, setButcheryName] = useState('Boucherie Arafat');
   const [dailyTarget, setDailyTarget] = useState<number>(250000);
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
+  const [salaries, setSalaries] = useState<Salary[]>([]);
   const [newRegistrationToast, setNewRegistrationToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,6 +76,7 @@ export default function DashboardPage() {
       setCashRegistries(LocalDbStore.getCashRegistries());
       setActivityLogs(LocalDbStore.getActivityLogs());
       setAccounts(LocalDbStore.getAccounts());
+      setSalaries(LocalDbStore.getSalaries());
       setStockRestants(LocalDbStore.getStockRestants());
     };
 
@@ -204,6 +206,9 @@ export default function DashboardPage() {
 
   // Debts
   const totalRemainingDebts = debts.reduce((acc, d) => acc + d.remainingAmount, 0);
+
+  // Total Salaries paid overall
+  const totalSalaries = salaries.reduce((acc, s) => acc + s.amountPaid, 0);
 
   // Net Profit (Admin only)
   // net_profit = Stock + Sales - Pertes - Expenses - Salaries - Debts
@@ -499,7 +504,7 @@ export default function DashboardPage() {
         {isAdmin ? (
           <div className="bg-slate-900/60 border border-slate-850 p-4 rounded-2xl">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Salaires Payés</p>
-            <p className="text-lg font-extrabold text-white mt-1">{formatFCFA(dailySalaries)}</p>
+            <p className="text-lg font-extrabold text-white mt-1">{formatFCFA(totalSalaries)}</p>
           </div>
         ) : (
           <div className="bg-slate-900/60 border border-slate-850 p-4 rounded-2xl">
