@@ -267,28 +267,20 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick info header status */}
-        <div className="flex flex-wrap gap-3">
-          <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 rounded-2xl px-4 py-2.5 shadow-md">
-            <Wallet className="h-5 w-5 text-emerald-450" />
+        <div className="flex flex-wrap gap-3.5">
+          <div className="flex items-center space-x-2.5 bg-slate-900 border border-slate-800 rounded-2xl px-4 py-2.5 shadow-md">
+            <Wallet className="h-5 w-5 text-emerald-455" />
             <div>
               <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Caisse de Départ</p>
               <p className="text-sm font-bold text-white">{formatFCFA(startingCash)}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 rounded-2xl px-4 py-2.5">
-            <UserCheck className="h-5 w-5 text-emerald-450" />
+          <div className="flex items-center space-x-2.5 bg-slate-900 border border-slate-800 rounded-2xl px-4 py-2.5 shadow-md">
+            <UserCheck className="h-5 w-5 text-emerald-455" />
             <div>
               <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Employés Actifs</p>
               <p className="text-sm font-bold text-white">{activeEmployeesCount} Présent(s)</p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 bg-slate-900 border border-slate-800 rounded-2xl px-4 py-2.5">
-            <Target className="h-5 w-5 text-emerald-450" />
-            <div>
-              <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Objectif du Jour</p>
-              <p className="text-sm font-bold text-white">{targetProgress}% ({formatFCFA(dailyCA)} / {Math.round(dailyTarget / 1000)}k)</p>
             </div>
           </div>
         </div>
