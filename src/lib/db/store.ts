@@ -301,21 +301,25 @@ export class LocalDbStore {
       // Remove frontend-only display fields that do not exist as DB columns
       delete snakeRecord.product_name;
       delete snakeRecord.supplier_name;
-      delete snakeRecord.employee_name;
 
       // Remove GENERATED ALWAYS columns that PostgreSQL rejects on insert/update
       if (table === 'sales' || table === 'outputs') {
         delete snakeRecord.total_amount;
       }
 
+      let res;
       if (action === 'insert') {
-        await supabase.from(table).insert(snakeRecord);
+        res = await supabase.from(table).insert(snakeRecord);
       } else if (action === 'update') {
-        await supabase.from(table).update(snakeRecord).eq('id', record.id);
+        res = await supabase.from(table).update(snakeRecord).eq('id', record.id);
       } else if (action === 'delete') {
-        await supabase.from(table).delete().eq('id', record.id);
+        res = await supabase.from(table).delete().eq('id', record.id);
       } else if (action === 'upsert') {
-        await supabase.from(table).upsert(snakeRecord);
+        res = await supabase.from(table).upsert(snakeRecord);
+      }
+
+      if (res && res.error) {
+        console.error(`Supabase error on ${action} in table "${table}":`, res.error);
       }
     } catch (e) {
       console.error(`Error syncing ${action} to Supabase table ${table}:`, e);

@@ -55,7 +55,7 @@ CREATE TABLE stock_history (
 CREATE TABLE outputs (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     product_id UUID REFERENCES products(id) ON DELETE CASCADE NOT NULL,
-    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    quantity INTEGER NOT NULL CHECK (quantity >= 0),
     unit_price NUMERIC NOT NULL CHECK (unit_price >= 0),
     total_amount NUMERIC NOT NULL GENERATED ALWAYS AS (quantity * unit_price) STORED,
     employee_name TEXT NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE outputs (
 CREATE TABLE sales (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     product_id UUID REFERENCES products(id) ON DELETE CASCADE NOT NULL,
-    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    quantity INTEGER NOT NULL CHECK (quantity >= 0),
     unit_price NUMERIC NOT NULL CHECK (unit_price >= 0),
     total_amount NUMERIC NOT NULL GENERATED ALWAYS AS (quantity * unit_price) STORED,
     payment_method payment_method NOT NULL DEFAULT 'Espèces',
@@ -78,7 +78,7 @@ CREATE TABLE sales (
 -- 8. Dépenses
 CREATE TABLE expenses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    amount NUMERIC NOT NULL CHECK (amount > 0),
+    amount NUMERIC NOT NULL CHECK (amount >= 0),
     category TEXT NOT NULL, -- Eau, Tomates, Cube, Maggi, Piment, Huile, Oignons, Charbon, Transport, Glace, Salaires, Divers
     description TEXT,
     recorded_by TEXT NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE expenses (
 CREATE TABLE debts (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     supplier_id UUID REFERENCES suppliers(id) ON DELETE CASCADE NOT NULL,
-    total_amount NUMERIC NOT NULL CHECK (total_amount > 0),
+    total_amount NUMERIC NOT NULL CHECK (total_amount >= 0),
     paid_amount NUMERIC NOT NULL DEFAULT 0 CHECK (paid_amount >= 0),
     remaining_amount NUMERIC NOT NULL DEFAULT 0 CHECK (remaining_amount >= 0),
     due_date DATE,
@@ -101,7 +101,7 @@ CREATE TABLE debts (
 CREATE TABLE debt_payments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     debt_id UUID REFERENCES debts(id) ON DELETE CASCADE NOT NULL,
-    amount_paid NUMERIC NOT NULL CHECK (amount_paid > 0),
+    amount_paid NUMERIC NOT NULL CHECK (amount_paid >= 0),
     recorded_by TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
