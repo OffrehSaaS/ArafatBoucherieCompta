@@ -64,6 +64,9 @@ export default function StockPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBatchConfirmOpen, setIsBatchConfirmOpen] = useState(false);
 
+  // Clear history state
+  const [isClearHistoryConfirmOpen, setIsClearHistoryConfirmOpen] = useState(false);
+
   // Delete Category Dialog States
   const [isDeleteCatDialogOpen, setIsDeleteCatDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
@@ -340,6 +343,20 @@ export default function StockPage() {
       }
       setSelectedIds([]);
       setIsBatchConfirmOpen(false);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Une erreur est survenue.');
+    }
+  };
+
+  const handleClearHistory = () => {
+    setIsClearHistoryConfirmOpen(true);
+  };
+
+  const handleConfirmClearHistory = () => {
+    try {
+      LocalDbStore.clearStockHistory(user?.fullName || 'Administrateur');
+      setIsClearHistoryConfirmOpen(false);
       loadData();
     } catch (err: any) {
       alert(err.message || 'Une erreur est survenue.');
@@ -691,6 +708,16 @@ export default function StockPage() {
                 className="text-[10px] text-rose-400 hover:text-rose-350 font-bold uppercase tracking-wider bg-rose-500/10 px-2.5 py-1.5 rounded-lg border border-rose-500/20 cursor-pointer"
               >
                 Réinitialiser
+              </button>
+            )}
+
+            {isAdmin && (
+              <button
+                onClick={handleClearHistory}
+                className="ml-auto flex items-center space-x-1.5 px-3 py-1.5 bg-rose-955/20 hover:bg-rose-900/40 text-rose-455 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer border border-rose-955/20"
+              >
+                <Trash2 size={13} />
+                <span>Vider l'historique</span>
               </button>
             )}
           </div>
@@ -1253,6 +1280,18 @@ export default function StockPage() {
         cancelText="Conserver"
         onConfirm={handleConfirmDeleteSelected}
         onCancel={() => setIsBatchConfirmOpen(false)}
+      />
+
+      {/* Clear History Confirmation */}
+      <ConfirmDialog
+        isOpen={isClearHistoryConfirmOpen}
+        title="Vider l'historique des flux"
+        message="Voulez-vous vraiment effacer TOUT l'historique des flux de stock ? Cette opération est définitive et effacera l'historique de tous les mouvements (entrées, sorties, ventes passées du registre de stock) sans affecter les quantités actuelles du stock au frigo."
+        type="danger"
+        confirmText="Vider l'historique"
+        cancelText="Conserver"
+        onConfirm={handleConfirmClearHistory}
+        onCancel={() => setIsClearHistoryConfirmOpen(false)}
       />
     </div>
   );

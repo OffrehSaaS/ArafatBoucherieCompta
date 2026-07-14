@@ -588,6 +588,16 @@ export class LocalDbStore {
     return getLocalStorageData<StockHistory[]>('boucherie_stock_history', []);
   }
 
+  static clearStockHistory(userName: string) {
+    setLocalStorageData('boucherie_stock_history', []);
+    if (isSupabaseConfigured() && supabase) {
+      supabase.from('stock_history').delete().neq('id', '00000000-0000-0000-0000-000000000000').then(({ error }) => {
+        if (error) console.error('Error clearing remote stock history:', error);
+      });
+    }
+    this.addActivityLog('Nettoyage Historique', "Historique des flux de stock vidé par l'administrateur", userName);
+  }
+
   static getOutputs(): Output[] {
     return getLocalStorageData<Output[]>('boucherie_outputs', []);
   }
