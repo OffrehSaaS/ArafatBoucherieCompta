@@ -179,29 +179,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (isSupabaseConfigured() && supabase) {
         // Get current authenticated user
         const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (!authUser) return { success: false, message: 'Utilisateur introuvable.' };
+        
+        if (authUser) {
+          // Update auth user if password/email changed
+          const updateData: any = {};
+          if (email !== user.email) updateData.email = email;
+          if (newPassword) updateData.password = newPassword;
 
-        // Update auth user if password/email changed
-        const updateData: any = {};
-        if (email !== user.email) updateData.email = email;
-        if (newPassword) updateData.password = newPassword;
+          if (Object.keys(updateData).length > 0) {
+            const { error: authError } = await supabase.auth.updateUser(updateData);
+            if (authError) return { success: false, message: authError.message };
+          }
 
-        if (Object.keys(updateData).length > 0) {
-          const { error: authError } = await supabase.auth.updateUser(updateData);
-          if (authError) return { success: false, message: authError.message };
+          // Update public.profiles table
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              full_name: fullName,
+              email: email,
+              avatar: avatar || null
+            })
+            .eq('id', authUser.id);
+
+          if (profileError) return { success: false, message: profileError.message };
+        } else {
+          // Local fallback inside Supabase block
+          const accounts = LocalDbStore.getAccounts();
+          const accIndex = accounts.findIndex(acc => acc.email.toLowerCase() === user.email.toLowerCase());
+          if (accIndex !== -1) {
+            const account = accounts[accIndex];
+            account.fullName = fullName;
+            account.email = email;
+            if (avatar !== undefined) account.avatar = avatar;
+            if (newPassword) account.password = newPassword;
+            accounts[accIndex] = account;
+            window.localStorage.setItem('boucherie_accounts', JSON.stringify(accounts));
+          }
         }
-
-        // Update public.profiles table
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            full_name: fullName,
-            email: email,
-            avatar: avatar || null
-          })
-          .eq('id', authUser.id);
-
-        if (profileError) return { success: false, message: profileError.message };
 
         const updatedUser: User = {
           ...user,
