@@ -212,7 +212,7 @@ export default function DashboardPage() {
 
   // Net Profit (Admin only)
   // net_profit = Stock + Sales - Pertes - Expenses - Salaries - Debts
-  const netProfit = totalStockValue + dailyCA - dailyLosses - dailyExpenses - dailySalaries - totalRemainingDebts;
+  const netProfit = totalStockValue + dailyCA - dailyLosses - dailyExpenses - totalSalaries - totalRemainingDebts;
 
   // Active employees on the selected date
   const jsDay = new Date(filterDateStr).getDay(); // 0 is Sunday, 1 is Monday...
