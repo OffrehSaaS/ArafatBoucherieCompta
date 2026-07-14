@@ -159,7 +159,7 @@ export default function RapportsPage() {
   const totalExpenses = filteredExpensesRaw.filter(e => e.category !== 'Salaires' && e.category !== 'Pertes').reduce((acc, e) => acc + e.amount, 0);
   const totalSalaries = filteredSalaries.reduce((acc, s) => acc + s.amountPaid, 0);
   const totalLosses = filteredExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
-  const totalDebts = filteredDebts.reduce((acc, d) => acc + d.remainingAmount, 0);
+  const totalDebts = debts.reduce((acc, d) => acc + d.remainingAmount, 0);
 
   // Valuation of inventory
   const totalStockVal = products.reduce((acc, p) => acc + (p.quantity * p.unitPrice), 0);
