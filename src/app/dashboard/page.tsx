@@ -72,24 +72,24 @@ export default function DashboardPage() {
   const [returnError, setReturnError] = useState('');
   const [returnLoading, setReturnLoading] = useState(false);
 
+  const loadLocal = () => {
+    setProducts(LocalDbStore.getProducts());
+    setSales(LocalDbStore.getSales());
+    setExpenses(LocalDbStore.getExpenses());
+    setOutputs(LocalDbStore.getOutputs());
+    setDebts(LocalDbStore.getDebts());
+    setEmployees(LocalDbStore.getEmployees());
+    setCashRegistries(LocalDbStore.getCashRegistries());
+    setActivityLogs(LocalDbStore.getActivityLogs());
+    setAccounts(LocalDbStore.getAccounts());
+    setSalaries(LocalDbStore.getSalaries());
+    setStockRestants(LocalDbStore.getStockRestants());
+  };
+
   useEffect(() => {
     setMounted(true);
     setSelectedDate(new Date().toISOString().split('T')[0]);
     
-    const loadLocal = () => {
-      setProducts(LocalDbStore.getProducts());
-      setSales(LocalDbStore.getSales());
-      setExpenses(LocalDbStore.getExpenses());
-      setOutputs(LocalDbStore.getOutputs());
-      setDebts(LocalDbStore.getDebts());
-      setEmployees(LocalDbStore.getEmployees());
-      setCashRegistries(LocalDbStore.getCashRegistries());
-      setActivityLogs(LocalDbStore.getActivityLogs());
-      setAccounts(LocalDbStore.getAccounts());
-      setSalaries(LocalDbStore.getSalaries());
-      setStockRestants(LocalDbStore.getStockRestants());
-    };
-
     loadLocal();
 
     if (typeof window !== 'undefined') {
