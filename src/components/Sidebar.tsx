@@ -56,9 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
 
   const menuItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'vendeur'] },
-    { name: 'Stock au Frigo', path: '/stock', icon: Boxes, roles: ['admin', 'vendeur'] },
-    { name: 'Sortie du Frigo Début de Journée', path: '/sorties', icon: ArrowUpRight, roles: ['admin', 'vendeur'] },
-    { name: 'Stock Restant Fin de Journée', path: '/stock-restant', icon: TrendingDown, roles: ['admin', 'vendeur'] },
+    { name: 'Sortie du Frigo Début de Journée', path: '/sorties', icon: ArrowUpRight, roles: ['admin'] },
     { name: 'Ventes', path: '/ventes', icon: ShoppingCart, roles: ['admin', 'vendeur'] },
     { name: 'Dépenses', path: '/depenses', icon: Receipt, roles: ['admin', 'vendeur'] },
     { name: 'Caisse', path: '/caisse', icon: Wallet, roles: ['admin', 'vendeur'] },
@@ -186,13 +184,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
               </div>
             </div>
             
-            {/* Quick switcher for testing - Admin only */}
-            {user?.role === 'admin' && (
+            {/* Quick switcher for testing */}
+            {(user?.role === 'admin' || user?.email === 'admin@arafat.com') && (
               <button 
                 onClick={handleRoleToggle}
                 className="text-[10px] text-center w-full mt-1.5 py-1 px-2 rounded bg-slate-700 hover:bg-slate-650 hover:text-white font-medium transition-all duration-150 uppercase tracking-wider"
               >
-                Tester Rôle Vendeur
+                {user?.role === 'admin' ? 'Tester Rôle Vendeur' : 'Revenir Rôle Admin'}
               </button>
             )}
           </div>

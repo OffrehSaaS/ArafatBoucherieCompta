@@ -15,6 +15,8 @@ import {
   Info 
 } from 'lucide-react';
 
+import { isSupabaseConfigured } from '@/lib/db/client';
+
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
@@ -63,6 +65,8 @@ export default function LoginPage() {
         } else {
           window.localStorage.removeItem('boucherie_remember_email');
         }
+        // Explicitly redirect to dashboard
+        router.push('/dashboard');
       }
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue lors de la connexion.');
@@ -118,10 +122,27 @@ export default function LoginPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="p-3.5 bg-rose-950/40 border border-rose-900/60 rounded-2xl flex items-center space-x-3 text-rose-200 text-xs"
+            className="p-3.5 bg-rose-950/40 border border-rose-900/60 rounded-2xl flex flex-col space-y-2 text-rose-200 text-xs"
           >
-            <ShieldAlert className="h-5 w-5 text-rose-455 flex-shrink-0" />
-            <span>{error}</span>
+            <div className="flex items-center space-x-3 w-full">
+              <ShieldAlert className="h-5 w-5 text-rose-400 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+            {!isSupabaseConfigured() && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.localStorage.removeItem('boucherie_accounts');
+                    window.localStorage.removeItem('boucherie_user');
+                    window.location.reload();
+                  }
+                }}
+                className="mt-1 text-[10px] text-emerald-400 hover:text-emerald-300 font-bold underline text-left cursor-pointer transition-colors"
+              >
+                Restaurer les comptes et mots de passe de démo par défaut (admin / admin)
+              </button>
+            )}
           </motion.div>
         )}
 

@@ -21,7 +21,9 @@ import {
   Target,
   CircleDollarSign,
   ChevronRight,
-  X
+  X,
+  Info,
+  Sparkles
 } from 'lucide-react';
 import {
   AreaChart,
@@ -61,6 +63,14 @@ export default function DashboardPage() {
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
   const [salaries, setSalaries] = useState<Salary[]>([]);
   const [newRegistrationToast, setNewRegistrationToast] = useState<string | null>(null);
+
+  // Seller return modal states
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [selectedOutput, setSelectedOutput] = useState<Output | null>(null);
+  const [returnQty, setReturnQty] = useState<number | ''>(0);
+  const [returnPaymentMethod, setReturnPaymentMethod] = useState<'Espèces' | 'Mobile Money' | 'Carte' | 'Autre'>('Espèces');
+  const [returnError, setReturnError] = useState('');
+  const [returnLoading, setReturnLoading] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -154,6 +164,75 @@ export default function DashboardPage() {
     }
   };
 
+  const handleOpenReturnModal = (output: Output) => {
+    setSelectedOutput(output);
+    setReturnQty(0);
+    setReturnPaymentMethod('Espèces');
+    setReturnError('');
+    setIsReturnModalOpen(true);
+  };
+
+  const handleSubmitReturn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReturnError('');
+    
+    if (!selectedOutput) return;
+    if (returnQty === '') {
+      setReturnError('Veuillez saisir la quantité restante.');
+      return;
+    }
+    if (returnQty < 0) {
+      setReturnError('La quantité restante ne peut pas être négative.');
+      return;
+    }
+    if (returnQty > selectedOutput.quantity) {
+      setReturnError(`Le restant (${returnQty}) ne peut pas dépasser la quantité initialement sortie (${selectedOutput.quantity}).`);
+      return;
+    }
+
+    setReturnLoading(true);
+    try {
+      LocalDbStore.submitOutputReturn(
+        selectedOutput.id,
+        returnQty,
+        returnPaymentMethod,
+        user?.fullName || 'Vendeur'
+      );
+      setIsReturnModalOpen(false);
+      loadLocal();
+    } catch (err: any) {
+      setReturnError(err.message || 'Une erreur est survenue.');
+    } finally {
+      setReturnLoading(false);
+    }
+  };
+
+  const handleApproveReturn = (output: Output) => {
+    try {
+      LocalDbStore.validateOutput(
+        output.id,
+        output.proposedRemaining!,
+        output.proposedPaymentMethod!,
+        user?.fullName || 'Administrateur'
+      );
+      loadLocal();
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de l\'approbation.');
+    }
+  };
+
+  const handleRejectReturn = (output: Output) => {
+    try {
+      LocalDbStore.rejectOutputReturn(
+        output.id,
+        user?.fullName || 'Administrateur'
+      );
+      loadLocal();
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors du rejet.');
+    }
+  };
+
   if (!mounted) {
     return (
       <div className="flex h-[80vh] items-center justify-center bg-slate-950 text-slate-100">
@@ -173,22 +252,30 @@ export default function DashboardPage() {
     return date.toLocaleDateString('fr-FR', { weekday: 'short' });
   };
 
+  // --- ROLE FILTERED DATASETS ---
+  const filteredSales = isAdmin ? sales : sales.filter(s => s.sellerName === user?.fullName);
+  const filteredExpenses = isAdmin ? expenses : expenses.filter(e => e.recordedBy === user?.fullName);
+  const filteredRestants = isAdmin ? stockRestants : stockRestants.filter(r => r.recordedBy === user?.fullName);
+
+  // Seller's active sorties/outputs assigned to them
+  const sellerActiveOutputs = outputs.filter(o => o.employeeName === user?.fullName && (o.status === 'en_cours' || o.status === 'en_attente_validation'));
+
   // --- KPI CALCULATIONS ---
   // Selected Date's Sales
-  const todaySales = sales.filter(s => s.createdAt.startsWith(filterDateStr));
+  const todaySales = filteredSales.filter(s => s.createdAt.startsWith(filterDateStr));
   const dailyCA = todaySales.reduce((acc, s) => acc + s.totalAmount, 0);
   const productsSoldToday = todaySales.reduce((acc, s) => acc + s.quantity, 0);
 
   // Selected Date's Expenses
-  const todayExpensesRaw = expenses.filter(e => e.createdAt.startsWith(filterDateStr));
+  const todayExpensesRaw = filteredExpenses.filter(e => e.createdAt.startsWith(filterDateStr));
   const dailyExpenses = todayExpensesRaw.filter(e => e.category !== 'Salaires' && e.category !== 'Pertes').reduce((acc, e) => acc + e.amount, 0);
-  const dailySalaries = todayExpensesRaw.filter(e => e.category === 'Salaires').reduce((acc, e) => acc + e.amount, 0);
+  const dailySalaries = isAdmin ? todayExpensesRaw.filter(e => e.category === 'Salaires').reduce((acc, e) => acc + e.amount, 0) : 0;
 
   // Selected Date's Losses (Pertes déclarées)
   const dailyLosses = todayExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
 
   // Daily stock restant value
-  const todayRestants = stockRestants.filter(r => r.createdAt.startsWith(filterDateStr));
+  const todayRestants = filteredRestants.filter(r => r.createdAt.startsWith(filterDateStr));
   const dailyStockRestantVal = todayRestants.reduce((acc, r) => acc + r.totalValue, 0);
 
   // Current Caisse endingCash & startingCash
@@ -200,9 +287,14 @@ export default function DashboardPage() {
     ? registries[0].startingCash
     : (cashRegistries.length > 0 ? [...cashRegistries].sort((a,b) => b.date.localeCompare(a.date))[0].startingCash : 150000);
 
-  // Stock values
-  const totalStockValue = products.reduce((acc, p) => acc + (p.quantity * p.unitPrice), 0);
-  const totalStockRemaining = products.reduce((acc, p) => acc + p.quantity, 0);
+  // Stock values (For sellers, represents the value of their stock in possession)
+  const totalStockValue = isAdmin
+    ? products.reduce((acc, p) => acc + (p.quantity * p.unitPrice), 0)
+    : sellerActiveOutputs.reduce((acc, o) => acc + ((o.remainingQuantity ?? o.proposedRemaining ?? o.quantity) * o.unitPrice), 0);
+
+  const totalStockRemaining = isAdmin
+    ? products.reduce((acc, p) => acc + p.quantity, 0)
+    : sellerActiveOutputs.reduce((acc, o) => acc + (o.remainingQuantity ?? o.proposedRemaining ?? o.quantity), 0);
 
   // Debts
   const totalRemainingDebts = debts.reduce((acc, d) => acc + d.remainingAmount, 0);
@@ -231,13 +323,13 @@ export default function DashboardPage() {
   }).reverse();
 
   const chartDataWeekly = last7Days.map(dateStr => {
-    const dateSales = sales.filter(s => s.createdAt.startsWith(dateStr));
-    const dateExpensesRaw = expenses.filter(e => e.createdAt.startsWith(dateStr));
+    const dateSales = filteredSales.filter(s => s.createdAt.startsWith(dateStr));
+    const dateExpensesRaw = filteredExpenses.filter(e => e.createdAt.startsWith(dateStr));
     const dateLosses = dateExpensesRaw.filter(e => e.category === 'Pertes');
 
     const salesTotal = dateSales.reduce((acc, s) => acc + s.totalAmount, 0);
     const expensesTotal = dateExpensesRaw.filter(e => e.category !== 'Salaires' && e.category !== 'Pertes').reduce((acc, e) => acc + e.amount, 0);
-    const salariesTotal = dateExpensesRaw.filter(e => e.category === 'Salaires').reduce((acc, e) => acc + e.amount, 0);
+    const salariesTotal = isAdmin ? dateExpensesRaw.filter(e => e.category === 'Salaires').reduce((acc, e) => acc + e.amount, 0) : 0;
     const lossesTotal = dateLosses.reduce((acc, e) => acc + e.amount, 0);
 
     const profit = salesTotal - expensesTotal - salariesTotal - lossesTotal;
@@ -253,7 +345,7 @@ export default function DashboardPage() {
   // --- CHART 2: EXPENSES PIE CHART ---
   const expenseCategories = ['Eau', 'Tomates', 'Cube', 'Maggi', 'Piment', 'Huile', 'Oignons', 'Charbon', 'Transport', 'Glace', 'Salaires', 'Pertes', 'Divers'];
   const expenseDataPie = expenseCategories.map(cat => {
-    const catExpenses = expenses.filter(e => e.category === cat);
+    const catExpenses = filteredExpenses.filter(e => e.category === cat);
     const total = catExpenses.reduce((acc, e) => acc + e.amount, 0);
     return { name: cat, value: total };
   }).filter(item => item.value > 0);
@@ -262,7 +354,7 @@ export default function DashboardPage() {
 
   // --- CHART 3: TOP SELLING PRODUCTS ---
   const productSalesMap = products.map(prod => {
-    const qty = sales.filter(s => s.productId === prod.id).reduce((acc, s) => acc + s.quantity, 0);
+    const qty = filteredSales.filter(s => s.productId === prod.id).reduce((acc, s) => acc + s.quantity, 0);
     return { name: prod.name, Quantité: qty };
   }).sort((a, b) => b.Quantité - a.Quantité).slice(0, 5);
 
@@ -375,6 +467,51 @@ export default function DashboardPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Pending Stock Returns Section (Admin only) */}
+      {isAdmin && outputs.filter(o => o.status === 'en_attente_validation').length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full bg-slate-900/50 border border-emerald-500/20 rounded-3xl p-5 space-y-4 shadow-xl"
+        >
+          <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+            <Clock size={16} className="animate-pulse" />
+            <span>Retour(s) de stock vendeur(s) en attente ({outputs.filter(o => o.status === 'en_attente_validation').length})</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3">
+            {outputs.filter(o => o.status === 'en_attente_validation').map(o => {
+              const qtySold = o.quantity - (o.proposedRemaining ?? 0);
+              const totalSalesAmount = qtySold * o.unitPrice;
+              return (
+                <div key={o.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-slate-950/80 border border-slate-850 rounded-2xl gap-4">
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-white">Vendeur : {o.employeeName}</p>
+                    <p className="text-xs text-slate-350 leading-relaxed font-light">
+                      Produit : <strong className="text-white">{o.productName}</strong> · Sorti : <strong>{o.quantity} pièces/kg</strong> · Retourné : <strong>{o.proposedRemaining} pièces/kg</strong> · Vendu : <strong>{qtySold} pièces/kg</strong> (valeur : <strong className="text-white">{formatFCFA(totalSalesAmount)}</strong>)
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-light">Paiement : {o.proposedPaymentMethod} · Reçu le : {new Date(o.createdAt).toLocaleDateString('fr-FR')} à {new Date(o.createdAt).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</p>
+                  </div>
+                  <div className="flex space-x-2.5 shrink-0">
+                    <button
+                      onClick={() => handleRejectReturn(o)}
+                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-rose-400 text-[10px] font-bold rounded-xl transition-colors cursor-pointer"
+                    >
+                      Rejeter / Corriger
+                    </button>
+                    <button
+                      onClick={() => handleApproveReturn(o)}
+                      className="px-4 py-2 bg-emerald-500 hover:bg-emerald-450 text-slate-950 text-[10px] font-bold rounded-xl transition-colors cursor-pointer shadow-lg shadow-emerald-500/10"
+                    >
+                      Approuver le retour
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </motion.div>
       )}
@@ -540,6 +677,66 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Active Stock Sorties Section (Vendeur only) */}
+      {!isAdmin && (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full bg-slate-900 border border-slate-850 rounded-3xl p-5 space-y-4 shadow-xl"
+        >
+          <div className="flex items-center justify-between border-b border-slate-850/60 pb-3">
+            <div>
+              <h3 className="text-md font-bold text-white flex items-center">
+                <Boxes className="text-emerald-400 mr-2 h-5 w-5" />
+                Mon Stock en Possession (Sorties de Caisse)
+              </h3>
+              <p className="text-xs text-slate-500">Viandes ou produits sortis du frigo assignés à votre caisse pour vente</p>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-1 bg-slate-850 text-slate-400 rounded-md">En Cours</span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            {sellerActiveOutputs.length > 0 ? (
+              sellerActiveOutputs.map(o => (
+                <div key={o.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-slate-950/80 border border-slate-850 rounded-2xl gap-4">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold text-white">{o.productName}</h4>
+                    <p className="text-xs text-slate-350 leading-relaxed font-light">
+                      Quantité Sortie : <strong className="text-white">{o.quantity} pièces/kg</strong> · Prix Unitaire : <strong className="text-white">{formatFCFA(o.unitPrice)}</strong>
+                    </p>
+                    {o.notes && <p className="text-[10px] text-slate-500 font-light italic">Note: {o.notes}</p>}
+                    <p className="text-[9px] text-slate-600">Sorti le : {new Date(o.createdAt).toLocaleDateString('fr-FR')} à {new Date(o.createdAt).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</p>
+                  </div>
+                  
+                  <div className="shrink-0 flex items-center">
+                    {o.status === 'en_attente_validation' ? (
+                      <div className="flex items-center space-x-2 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-xl">
+                        <Clock size={14} className="text-amber-500 animate-spin" style={{ animationDuration: '4s' }} />
+                        <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">En attente de validation</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleOpenReturnModal(o)}
+                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-450 text-slate-950 text-[10px] font-bold rounded-xl transition-all duration-150 cursor-pointer shadow-lg shadow-emerald-500/10 flex items-center space-x-1.5"
+                      >
+                        <TrendingDown size={12} />
+                        <span>Clôturer / Retourner le Stock</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center text-slate-500 bg-slate-950/40 rounded-2xl border border-dashed border-slate-850">
+                <Boxes size={32} className="text-slate-600 mb-2" />
+                <span className="text-xs font-medium">Aucun stock ne vous est assigné actuellement pour aujourd'hui.</span>
+                <p className="text-[10px] text-slate-600 mt-1">L'administrateur doit enregistrer une sortie de stock pour votre caisse.</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* GRAPHICS SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -810,6 +1007,122 @@ export default function DashboardPage() {
               <X size={14} />
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Seller Return Stock Modal */}
+      <AnimatePresence>
+        {isReturnModalOpen && selectedOutput && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsReturnModalOpen(false)}
+              className="absolute inset-0 bg-black"
+            />
+            {/* Content */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl p-6 z-10"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-slate-850">
+                <h3 className="text-lg font-extrabold text-white flex items-center">
+                  <Sparkles className="text-emerald-400 mr-2 h-5 w-5" />
+                  Clôturer et Déclarer le Restant
+                </h3>
+                <button
+                  onClick={() => setIsReturnModalOpen(false)}
+                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {returnError && (
+                <div className="my-4 p-3.5 bg-rose-950/40 border border-rose-900/60 rounded-xl text-rose-200 text-xs flex items-center space-x-2">
+                  <Info size={16} className="text-rose-400 flex-shrink-0" />
+                  <span>{returnError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmitReturn} className="space-y-4 mt-4">
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 space-y-2 text-xs text-slate-400">
+                  <p>Produit : <span className="text-white font-bold">{selectedOutput.productName}</span></p>
+                  <p>Quantité initialement sortie : <span className="text-white font-bold">{selectedOutput.quantity} pièces/kg</span></p>
+                  <p>Prix unitaire : <span className="text-white font-bold">{formatFCFA(selectedOutput.unitPrice)}</span></p>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Quantité Restante (Retournée)</label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    step="any"
+                    max={selectedOutput.quantity}
+                    value={returnQty}
+                    onChange={e => setReturnQty(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="Ex: 2"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-650 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    Cette quantité sera réintégrée dans le frigo après validation de l'administrateur.
+                  </span>
+                </div>
+
+                {returnQty !== '' && returnQty <= selectedOutput.quantity && (
+                  <>
+                    <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-850 flex justify-between items-center text-xs">
+                      <span className="text-slate-500 uppercase font-bold tracking-wider text-[10px]">Quantité vendue (calculée)</span>
+                      <span className="font-extrabold text-emerald-400">{selectedOutput.quantity - returnQty} pièces/kg</span>
+                    </div>
+
+                    <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-850 flex justify-between items-center text-xs">
+                      <span className="text-slate-500 uppercase font-bold tracking-wider text-[10px]">Chiffre d'affaires estimé</span>
+                      <span className="font-extrabold text-emerald-400">{formatFCFA((selectedOutput.quantity - returnQty) * selectedOutput.unitPrice)}</span>
+                    </div>
+                  </>
+                )}
+
+                {/* Mode de Paiement */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Mode de Paiement des Ventes</label>
+                  <select
+                    value={returnPaymentMethod}
+                    onChange={e => setReturnPaymentMethod(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    <option value="Espèces">Espèces</option>
+                    <option value="Mobile Money">Mobile Money</option>
+                    <option value="Carte">Carte</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                </div>
+
+                {/* Actions */}
+                <div className="flex space-x-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsReturnModalOpen(false)}
+                    className="w-1/2 py-3 bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={returnLoading}
+                    className="w-1/2 py-3 bg-emerald-500 hover:bg-emerald-450 text-slate-950 rounded-xl font-bold text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/10"
+                  >
+                    {returnLoading ? 'Soumission...' : 'Soumettre le retour'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

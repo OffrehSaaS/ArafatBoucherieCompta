@@ -86,8 +86,10 @@ export interface Output {
   employeeName: string;
   notes: string;
   createdAt: string;
-  status: 'en_cours' | 'valide';
+  status: 'en_cours' | 'en_attente_validation' | 'valide';
   paymentMethod?: 'Espèces' | 'Mobile Money' | 'Carte' | 'Autre';
+  proposedRemaining?: number;
+  proposedPaymentMethod?: 'Espèces' | 'Mobile Money' | 'Carte' | 'Autre';
 }
 
 export interface Sale {
@@ -967,6 +969,8 @@ export class LocalDbStore {
     output.soldQuantity = soldQty;
     output.totalAmount = soldQty * output.unitPrice;
     output.paymentMethod = paymentMethod;
+    output.proposedRemaining = undefined;
+    output.proposedPaymentMethod = undefined;
     if (customDate) {
       output.createdAt = customDate;
     }
@@ -975,6 +979,52 @@ export class LocalDbStore {
     this.syncToSupabase('outputs', 'update', output);
     this.addActivityLog('Clôture Sortie', `Sortie ${output.productName} clôturée : ${soldQty} vendus, ${remainingQuantity} retournés au frigo.`, userName);
     this.recalculateCaisseForDate(output.createdAt.split('T')[0]);
+
+    return output;
+  }
+
+  static submitOutputReturn(id: string, proposedRemaining: number, paymentMethod: Sale['paymentMethod'], userName: string): Output {
+    const outputs = getLocalStorageData<Output[]>('boucherie_outputs', MOCK_OUTPUTS);
+    const index = outputs.findIndex(o => o.id === id);
+    if (index === -1) throw new Error('Sortie introuvable.');
+
+    const output = outputs[index];
+    if (output.status !== 'en_cours') {
+      throw new Error("Cette sortie ne peut pas être retournée car elle n'est plus en cours.");
+    }
+
+    if (proposedRemaining > output.quantity) {
+      throw new Error(`La quantité retournée (${proposedRemaining}) ne peut pas dépasser la quantité initiale (${output.quantity}).`);
+    }
+
+    output.status = 'en_attente_validation';
+    output.proposedRemaining = proposedRemaining;
+    output.proposedPaymentMethod = paymentMethod;
+
+    setLocalStorageData('boucherie_outputs', outputs);
+    this.syncToSupabase('outputs', 'update', output);
+    this.addActivityLog('Retour Soumis', `Retour de ${proposedRemaining} ${output.productName} soumis par ${userName} (en attente de validation).`, userName);
+
+    return output;
+  }
+
+  static rejectOutputReturn(id: string, userName: string): Output {
+    const outputs = getLocalStorageData<Output[]>('boucherie_outputs', MOCK_OUTPUTS);
+    const index = outputs.findIndex(o => o.id === id);
+    if (index === -1) throw new Error('Sortie introuvable.');
+
+    const output = outputs[index];
+    if (output.status !== 'en_attente_validation') {
+      throw new Error("Cette sortie n'est pas en attente de validation.");
+    }
+
+    output.status = 'en_cours';
+    output.proposedRemaining = undefined;
+    output.proposedPaymentMethod = undefined;
+
+    setLocalStorageData('boucherie_outputs', outputs);
+    this.syncToSupabase('outputs', 'update', output);
+    this.addActivityLog('Retour Rejeté', `Demande de retour pour la sortie ${output.productName} rejetée par ${userName}.`, userName);
 
     return output;
   }
