@@ -1965,10 +1965,24 @@ export class LocalDbStore {
   static getAccounts(): UserAccount[] {
     const DEFAULT_ACCOUNTS: UserAccount[] = [
       { id: 'acc-1', email: 'admin@arafat.com', fullName: 'Brahim Ould', phone: '+226 70 00 11 22', role: 'admin', companyName: 'Boucherie Arafat', password: 'admin', status: 'active', createdAt: '2026-07-01T08:00:00Z' },
+      { id: 'acc-admin-new', email: 'directeur@arafat.com', fullName: 'Directeur Général', phone: '+226 70 12 34 56', role: 'admin', companyName: 'Boucherie Arafat', password: 'Admin2026!', status: 'active', createdAt: '2026-08-01T08:00:00Z' },
       { id: 'acc-2', email: 'vendeur@arafat.com', fullName: 'Fatoumata Barry', phone: '+226 73 11 22 33', role: 'vendeur', password: 'vendeur', status: 'active', createdAt: '2026-07-02T09:00:00Z' },
+      { id: 'acc-vendeur-new', email: 'amadou@arafat.com', fullName: 'Amadou Diallo', phone: '+226 76 54 32 10', role: 'vendeur', password: 'Vendeur2026!', status: 'active', createdAt: '2026-08-01T09:00:00Z' },
       { id: 'acc-3', email: 'moussa@arafat.com', fullName: 'Moussa Sawadogo', phone: '+226 74 22 33 44', role: 'vendeur', password: 'moussa', status: 'pending', createdAt: '2026-07-12T17:30:00Z' }
     ];
-    return getLocalStorageData('boucherie_accounts', DEFAULT_ACCOUNTS);
+    const stored = getLocalStorageData<UserAccount[]>('boucherie_accounts', DEFAULT_ACCOUNTS);
+    let hasChanges = false;
+    DEFAULT_ACCOUNTS.forEach(defaultAcc => {
+      const exists = stored.some(acc => acc.email.toLowerCase() === defaultAcc.email.toLowerCase());
+      if (!exists) {
+        stored.push(defaultAcc);
+        hasChanges = true;
+      }
+    });
+    if (hasChanges && typeof window !== 'undefined') {
+      setLocalStorageData('boucherie_accounts', stored);
+    }
+    return stored;
   }
 
   static registerAccount(account: Omit<UserAccount, 'id' | 'createdAt'>): UserAccount {

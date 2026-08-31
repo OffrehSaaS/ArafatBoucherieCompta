@@ -5,6 +5,7 @@ import Link from 'next/navigation';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { LocalDbStore } from '@/lib/db/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -81,6 +82,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
     switchRole(nextRole);
     router.refresh();
   };
+
+  const isOriginalAdmin = user ? LocalDbStore.getAccounts().find(a => a.email.toLowerCase() === user.email.toLowerCase())?.role === 'admin' : false;
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-slate-900 text-slate-400 dark:bg-slate-950 border-r border-slate-800">
@@ -185,7 +188,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
             </div>
             
             {/* Quick switcher for testing */}
-            {(user?.role === 'admin' || user?.email === 'admin@arafat.com') && (
+            {(user?.role === 'admin' || isOriginalAdmin) && (
               <button 
                 onClick={handleRoleToggle}
                 className="text-[10px] text-center w-full mt-1.5 py-1 px-2 rounded bg-slate-700 hover:bg-slate-650 hover:text-white font-medium transition-all duration-150 uppercase tracking-wider"
@@ -208,7 +211,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
           </button>
 
           {/* Collapsed Role Icon Trigger (Admin only) */}
-          {isCollapsed && !mobileOpen && user?.role === 'admin' && (
+          {isCollapsed && !mobileOpen && (user?.role === 'admin' || isOriginalAdmin) && (
             <button
               onClick={handleRoleToggle}
               className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors text-emerald-400"

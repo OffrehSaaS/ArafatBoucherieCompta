@@ -1,4 +1,17 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🥩 ArafatBoucherieCompta (Arafat Compta)
+
+Application moderne de gestion comptable et opérationnelle sur-mesure pour boucheries.
+
+## 🔐 Identifiants de Démonstration
+
+| Rôle | Email | Mot de passe | Nom |
+| :--- | :--- | :--- | :--- |
+| **Admin** (Nouveau) | `directeur@arafat.com` | `Admin2026!` | Directeur Général |
+| **Admin** | `admin@arafat.com` | `admin` | Brahim Ould |
+| **Vendeur** (Nouveau) | `amadou@arafat.com` | `Vendeur2026!` | Amadou Diallo |
+| **Vendeur** | `vendeur@arafat.com` | `vendeur` | Fatoumata Barry |
+
+Pour plus de détails, consultez [COMPTES_ACCES.md](./COMPTES_ACCES.md).
 
 ## Getting Started
 
