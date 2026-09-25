@@ -21,7 +21,9 @@ import {
   Tag,
   BookOpen,
   ArrowDownLeft,
-  Settings
+  Settings,
+  Lock,
+  Boxes
 } from 'lucide-react';
 
 type TabType = 'current' | 'history' | 'catalog' | 'categories';
@@ -29,6 +31,7 @@ type TabType = 'current' | 'history' | 'catalog' | 'categories';
 export default function StockPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const canManageStock = isAdmin || Boolean(user?.canManageStock);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -142,7 +145,7 @@ export default function StockPage() {
 
   // 1. OPEN PRODUCT MODAL (Add/Edit)
   const openAddModal = () => {
-    if (!isAdmin) return;
+    if (!canManageStock) return;
     setEditingProduct(null);
     setName('');
     if (categories.length > 0) {
@@ -426,6 +429,20 @@ export default function StockPage() {
 
   const totalStockVal = filteredProducts.reduce((acc, p) => acc + (p.quantity * p.unitPrice), 0);
 
+  if (!canManageStock) {
+    return (
+      <div className="flex h-[75vh] flex-col items-center justify-center text-center p-6 bg-slate-900/30 border border-slate-800 rounded-3xl">
+        <div className="p-4 bg-rose-500/10 text-rose-500 rounded-2xl mb-4">
+          <Lock className="h-12 w-12" />
+        </div>
+        <h2 className="text-xl font-black text-white">Accès Restreint au Stock Frigo</h2>
+        <p className="text-slate-400 text-sm max-w-sm mt-2">
+          Le Stock au frigo est sous le contrôle exclusif de l'administrateur principal. Vous devez obtenir une autorisation accordée par l'administrateur pour pouvoir y accéder et le manipuler.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 select-none">
       {/* Title & Actions */}
@@ -439,7 +456,7 @@ export default function StockPage() {
         </div>
 
         <div className="flex flex-wrap gap-2.5">
-          {/* Incoming Stock button - available to Sellers too */}
+          {/* Incoming Stock button */}
           <button
             onClick={openIncomingModal}
             className="flex items-center justify-center space-x-2 px-4 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-emerald-400 hover:text-emerald-350 rounded-2xl font-bold cursor-pointer transition-colors"
@@ -448,8 +465,8 @@ export default function StockPage() {
             <span>Arrivage Stock (Entrée)</span>
           </button>
 
-          {/* New product button - admin only */}
-          {isAdmin && (
+          {/* New product button */}
+          {canManageStock && (
             <button
               onClick={openAddModal}
               className="flex items-center justify-center space-x-2 px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl font-bold shadow-lg shadow-emerald-500/10 cursor-pointer"
@@ -486,31 +503,32 @@ export default function StockPage() {
           <span>Historique des Flux</span>
         </button>
 
+        {canManageStock && (
+          <button
+            onClick={() => setActiveTab('catalog')}
+            className={`py-3 px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all shrink-0 flex items-center space-x-2 ${
+              activeTab === 'catalog'
+                ? 'border-emerald-500 text-emerald-400'
+                : 'border-transparent text-slate-500 hover:text-slate-350'
+            }`}
+          >
+            <BookOpen size={15} />
+            <span>Catalogue Produits</span>
+          </button>
+        )}
+
         {isAdmin && (
-          <>
-            <button
-              onClick={() => setActiveTab('catalog')}
-              className={`py-3 px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all shrink-0 flex items-center space-x-2 ${
-                activeTab === 'catalog'
-                  ? 'border-emerald-500 text-emerald-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-350'
-              }`}
-            >
-              <BookOpen size={15} />
-              <span>Catalogue Produits</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('categories')}
-              className={`py-3 px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all shrink-0 flex items-center space-x-2 ${
-                activeTab === 'categories'
-                  ? 'border-emerald-500 text-emerald-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-350'
-              }`}
-            >
-              <Tag size={15} />
-              <span>Catégories</span>
-            </button>
-          </>
+          <button
+            onClick={() => setActiveTab('categories')}
+            className={`py-3 px-6 text-xs font-black uppercase tracking-wider border-b-2 transition-all shrink-0 flex items-center space-x-2 ${
+              activeTab === 'categories'
+                ? 'border-emerald-500 text-emerald-400'
+                : 'border-transparent text-slate-500 hover:text-slate-350'
+            }`}
+          >
+            <Tag size={15} />
+            <span>Catégories</span>
+          </button>
         )}
       </div>
 
@@ -559,7 +577,7 @@ export default function StockPage() {
 
           {/* Batch delete action bar */}
           <AnimatePresence>
-            {isAdmin && selectedIds.length > 0 && (
+            {canManageStock && selectedIds.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -586,7 +604,7 @@ export default function StockPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/40">
-                    {isAdmin && (
+                    {canManageStock && (
                       <th className="py-4 px-6 w-10">
                         <input
                           type="checkbox"
@@ -610,7 +628,7 @@ export default function StockPage() {
                   {filteredProducts.length > 0 ? (
                     filteredProducts.map(prod => (
                       <tr key={prod.id} className="hover:bg-slate-850/30 transition-colors">
-                        {isAdmin && (
+                        {canManageStock && (
                           <td className="py-4 px-6 w-10">
                             <input
                               type="checkbox"
@@ -644,11 +662,11 @@ export default function StockPage() {
                             <button
                               onClick={() => openEditModal(prod)}
                               className="p-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-450 rounded-lg transition-colors cursor-pointer"
-                              title={isAdmin ? "Modifier Stock / Prix" : "Modifier Arrivage"}
+                              title="Modifier Stock / Prix"
                             >
                               <Edit3 size={13} />
                             </button>
-                            {isAdmin && (
+                            {canManageStock && (
                               <button
                                 onClick={() => triggerDeleteProduct(prod.id)}
                                 className="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded-lg transition-colors cursor-pointer"
@@ -663,7 +681,7 @@ export default function StockPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={isAdmin ? 9 : 8} className="py-12 text-center text-slate-500">
+                      <td colSpan={canManageStock ? 9 : 8} className="py-12 text-center text-slate-500">
                         <Inbox className="h-12 w-12 mx-auto mb-2 opacity-30 text-slate-400" />
                         <span>Aucun produit trouvé dans le stock.</span>
                       </td>
@@ -779,8 +797,8 @@ export default function StockPage() {
       </div>
       )}
 
-      {/* -------------------- TAB 3: CATALOGUE PRODUITS (Admin only) -------------------- */}
-      {activeTab === 'catalog' && isAdmin && (
+      {/* -------------------- TAB 3: CATALOGUE PRODUITS (Admin & Authorized Sellers) -------------------- */}
+      {activeTab === 'catalog' && canManageStock && (
         <div className="bg-slate-900 border border-slate-850 rounded-3xl overflow-hidden animate-fadeIn">
           <div className="p-5 border-b border-slate-800 bg-slate-950/20 flex justify-between items-center">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider">Catalogue des Références Produits</h3>
@@ -1192,7 +1210,7 @@ export default function StockPage() {
                     <input
                       type="number"
                       required
-                      disabled={!!editingProduct && !isAdmin} // admin can modify initial quantity directly, seller cannot
+                      disabled={!!editingProduct && !canManageStock} // admin or authorized user can modify initial quantity directly
                       min={0}
                       value={quantity || ''}
                       onChange={e => updateQuantity(Number(e.target.value))}

@@ -21,7 +21,12 @@ export const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ childre
         router.push('/login');
       } else if (user && (pathname === '/login' || pathname === '/register')) {
         router.push('/dashboard');
-      } else if (user && (pathname === '/stock' || pathname === '/stock-restant')) {
+      } else if (user && pathname === '/stock') {
+        const canAccessStock = user.role === 'admin' || Boolean(user.canManageStock);
+        if (!canAccessStock) {
+          router.push('/dashboard');
+        }
+      } else if (user && pathname === '/stock-restant' && user.role !== 'admin') {
         router.push('/dashboard');
       } else if (user && user.role !== 'admin' && pathname === '/sorties') {
         router.push('/dashboard');

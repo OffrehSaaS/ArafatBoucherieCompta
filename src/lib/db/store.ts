@@ -24,6 +24,7 @@ export interface Profile {
   email: string;
   role: UserRole;
   fullName: string;
+  canManageStock?: boolean;
 }
 
 export interface UserAccount {
@@ -37,6 +38,7 @@ export interface UserAccount {
   status: 'active' | 'pending' | 'rejected';
   createdAt: string;
   avatar?: string;
+  canManageStock?: boolean; // Permet à l'admin de donner accès au Stock au Frigo
 }
 
 export interface Supplier {
@@ -561,7 +563,8 @@ export class LocalDbStore {
           password: '',
           status: p.status,
           createdAt: p.created_at,
-          avatar: p.avatar || undefined
+          avatar: p.avatar || undefined,
+          canManageStock: p.role === 'admin' ? true : Boolean(p.can_manage_stock)
         }));
         setLocalStorageData('boucherie_accounts', accounts);
       }
@@ -1964,11 +1967,11 @@ export class LocalDbStore {
   // User Account Management
   static getAccounts(): UserAccount[] {
     const DEFAULT_ACCOUNTS: UserAccount[] = [
-      { id: 'acc-1', email: 'admin@arafat.com', fullName: 'Brahim Ould', phone: '+226 70 00 11 22', role: 'admin', companyName: 'Boucherie Arafat', password: 'admin', status: 'active', createdAt: '2026-07-01T08:00:00Z' },
-      { id: 'acc-admin-new', email: 'directeur@arafat.com', fullName: 'Directeur Général', phone: '+226 70 12 34 56', role: 'admin', companyName: 'Boucherie Arafat', password: 'Admin2026!', status: 'active', createdAt: '2026-08-01T08:00:00Z' },
-      { id: 'acc-2', email: 'vendeur@arafat.com', fullName: 'Fatoumata Barry', phone: '+226 73 11 22 33', role: 'vendeur', password: 'vendeur', status: 'active', createdAt: '2026-07-02T09:00:00Z' },
-      { id: 'acc-vendeur-new', email: 'amadou@arafat.com', fullName: 'Amadou Diallo', phone: '+226 76 54 32 10', role: 'vendeur', password: 'Vendeur2026!', status: 'active', createdAt: '2026-08-01T09:00:00Z' },
-      { id: 'acc-3', email: 'moussa@arafat.com', fullName: 'Moussa Sawadogo', phone: '+226 74 22 33 44', role: 'vendeur', password: 'moussa', status: 'pending', createdAt: '2026-07-12T17:30:00Z' }
+      { id: 'acc-1', email: 'admin@arafat.com', fullName: 'Brahim Ould', phone: '+226 70 00 11 22', role: 'admin', companyName: 'Boucherie Arafat', password: 'admin', status: 'active', createdAt: '2026-07-01T08:00:00Z', canManageStock: true },
+      { id: 'acc-admin-new', email: 'directeur@arafat.com', fullName: 'Directeur Général', phone: '+226 70 12 34 56', role: 'admin', companyName: 'Boucherie Arafat', password: 'Admin2026!', status: 'active', createdAt: '2026-08-01T08:00:00Z', canManageStock: true },
+      { id: 'acc-2', email: 'vendeur@arafat.com', fullName: 'Fatoumata Barry', phone: '+226 73 11 22 33', role: 'vendeur', password: 'vendeur', status: 'active', createdAt: '2026-07-02T09:00:00Z', canManageStock: false },
+      { id: 'acc-vendeur-new', email: 'amadou@arafat.com', fullName: 'Amadou Diallo', phone: '+226 76 54 32 10', role: 'vendeur', password: 'Vendeur2026!', status: 'active', createdAt: '2026-08-01T09:00:00Z', canManageStock: false },
+      { id: 'acc-3', email: 'moussa@arafat.com', fullName: 'Moussa Sawadogo', phone: '+226 74 22 33 44', role: 'vendeur', password: 'moussa', status: 'pending', createdAt: '2026-07-12T17:30:00Z', canManageStock: false }
     ];
     const stored = getLocalStorageData<UserAccount[]>('boucherie_accounts', DEFAULT_ACCOUNTS);
     let hasChanges = false;
@@ -1976,6 +1979,12 @@ export class LocalDbStore {
       const exists = stored.some(acc => acc.email.toLowerCase() === defaultAcc.email.toLowerCase());
       if (!exists) {
         stored.push(defaultAcc);
+        hasChanges = true;
+      }
+    });
+    stored.forEach(acc => {
+      if (acc.canManageStock === undefined) {
+        acc.canManageStock = acc.role === 'admin';
         hasChanges = true;
       }
     });
@@ -1994,7 +2003,8 @@ export class LocalDbStore {
     const newAccount: UserAccount = {
       ...account,
       id: generateId('acc'),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      canManageStock: account.role === 'admin' ? true : Boolean(account.canManageStock)
     };
     accounts.push(newAccount);
     setLocalStorageData('boucherie_accounts', accounts);
@@ -2044,6 +2054,40 @@ export class LocalDbStore {
     return account;
   }
 
+  static toggleAccountStockAccess(id: string, userName: string): UserAccount {
+    const accounts = this.getAccounts();
+    const index = accounts.findIndex(acc => acc.id === id);
+    if (index === -1) throw new Error('Compte introuvable.');
+
+    const account = accounts[index];
+    account.canManageStock = !account.canManageStock;
+    setLocalStorageData('boucherie_accounts', accounts);
+    this.syncToSupabase('profiles', 'update', { id, can_manage_stock: account.canManageStock });
+
+    // Update active user in localStorage if matching
+    if (typeof window !== 'undefined') {
+      const savedUserStr = window.localStorage.getItem('boucherie_user');
+      if (savedUserStr) {
+        try {
+          const savedUser = JSON.parse(savedUserStr);
+          if (savedUser.email?.toLowerCase() === account.email.toLowerCase()) {
+            savedUser.canManageStock = account.canManageStock;
+            window.localStorage.setItem('boucherie_user', JSON.stringify(savedUser));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
+    this.addActivityLog(
+      'Contrôle Stock Frigo',
+      `Le contrôle du Stock au Frigo a été ${account.canManageStock ? 'accordé à' : 'retiré pour'} ${account.fullName} par ${userName}`,
+      userName
+    );
+    return account;
+  }
+
   static updateAccountRole(id: string, role: 'admin' | 'vendeur', userName: string): UserAccount {
     const accounts = this.getAccounts();
     const index = accounts.findIndex(acc => acc.id === id);
@@ -2051,8 +2095,11 @@ export class LocalDbStore {
 
     const account = accounts[index];
     account.role = role;
+    if (role === 'admin') {
+      account.canManageStock = true;
+    }
     setLocalStorageData('boucherie_accounts', accounts);
-    this.syncToSupabase('profiles', 'update', { id, role });
+    this.syncToSupabase('profiles', 'update', { id, role, can_manage_stock: account.canManageStock });
 
     this.addActivityLog(
       'Rôle Compte',

@@ -21,12 +21,15 @@ import {
   ShieldCheck,
   UserCheck,
   Lock,
-  UserX
+  UserX,
+  CheckCircle2,
+  Boxes
 } from 'lucide-react';
 
 export default function EmployesPage() {
-  const { user } = useAuth();
+  const { user, refreshUserPermissions } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const [stockPermissionToast, setStockPermissionToast] = useState<string | null>(null);
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -219,7 +222,24 @@ export default function EmployesPage() {
   const handleRoleChange = (id: string, role: 'admin' | 'vendeur') => {
     try {
       LocalDbStore.updateAccountRole(id, role, user?.fullName || 'Administrateur');
+      refreshUserPermissions();
       loadData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleToggleStockAccess = (id: string) => {
+    try {
+      const updated = LocalDbStore.toggleAccountStockAccess(id, user?.fullName || 'Administrateur');
+      refreshUserPermissions();
+      loadData();
+      setStockPermissionToast(
+        updated.canManageStock
+          ? `Accès accordé : ${updated.fullName} a désormais le contrôle du Stock au Frigo.`
+          : `Accès révoqué : ${updated.fullName} n'a plus accès au Stock au Frigo.`
+      );
+      setTimeout(() => setStockPermissionToast(null), 4000);
     } catch (err: any) {
       alert(err.message);
     }
@@ -271,7 +291,33 @@ export default function EmployesPage() {
   );
 
   return (
-    <div className="space-y-6 select-none">
+    <div className="space-y-6 select-none relative">
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {stockPermissionToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-6 right-6 z-50 max-w-md bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl shadow-2xl flex items-center space-x-3 backdrop-blur-md"
+          >
+            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
+              <Boxes size={18} className="animate-pulse" />
+            </div>
+            <div className="flex-1 text-xs">
+              <p className="font-extrabold text-white">Stock au Frigo</p>
+              <p className="text-slate-350 font-light mt-0.5">{stockPermissionToast}</p>
+            </div>
+            <button
+              onClick={() => setStockPermissionToast(null)}
+              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Title & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -445,6 +491,7 @@ export default function EmployesPage() {
                   <th className="py-4 px-6">Adresse Email</th>
                   <th className="py-4 px-6">Téléphone</th>
                   <th className="py-4 px-6">Rôle</th>
+                  <th className="py-4 px-6 text-center">Accès Stock Frigo</th>
                   <th className="py-4 px-6">Statut d'Accès</th>
                   <th className="py-4 px-6">Date de Création</th>
                   <th className="py-4 px-6 text-center">Actions</th>
@@ -475,6 +522,36 @@ export default function EmployesPage() {
                             <option value="vendeur" className="bg-slate-900 text-amber-400">Vendeur</option>
                             <option value="admin" className="bg-slate-900 text-emerald-400">Admin</option>
                           </select>
+                        )}
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        {acc.role === 'admin' ? (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <ShieldCheck size={12} className="mr-1" />
+                            Contrôle Total (Admin)
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleToggleStockAccess(acc.id)}
+                            className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all duration-150 cursor-pointer border ${
+                              acc.canManageStock
+                                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/30'
+                                : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:bg-slate-750 hover:text-white'
+                            }`}
+                            title={acc.canManageStock ? "Cliquer pour révoquer le contrôle du Stock au Frigo" : "Cliquer pour accorder le contrôle du Stock au Frigo"}
+                          >
+                            {acc.canManageStock ? (
+                              <>
+                                <CheckCircle2 size={13} className="text-emerald-400" />
+                                <span>Autorisé</span>
+                              </>
+                            ) : (
+                              <>
+                                <Lock size={13} className="text-slate-500" />
+                                <span>Non autorisé</span>
+                              </>
+                            )}
+                          </button>
                         )}
                       </td>
                       <td className="py-4 px-6">
@@ -532,7 +609,7 @@ export default function EmployesPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500">
+                    <td colSpan={8} className="py-12 text-center text-slate-500">
                       Aucun compte utilisateur enregistré.
                     </td>
                   </tr>

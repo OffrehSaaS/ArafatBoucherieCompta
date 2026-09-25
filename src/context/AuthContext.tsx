@@ -10,6 +10,7 @@ interface User {
   role: UserRole;
   fullName: string;
   avatar?: string;
+  canManageStock?: boolean;
 }
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ interface AuthContextType {
   logout: () => void;
   switchRole: (role: UserRole) => void;
   updateProfile: (fullName: string, email: string, avatar?: string, newPassword?: string) => Promise<{ success: boolean; message?: string }>;
+  refreshUserPermissions: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,7 +38,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (savedUser) {
         const parsed = JSON.parse(savedUser) as User;
-        setUser({ ...parsed, role: savedRole });
+        const accounts = LocalDbStore.getAccounts();
+        const currentAcc = accounts.find(a => a.email.toLowerCase() === parsed.email.toLowerCase());
+        const canManageStock = savedRole === 'admin' ? true : Boolean(currentAcc?.canManageStock);
+        setUser({ ...parsed, role: savedRole, canManageStock });
         
         // Perform background sync from Supabase if configured and wait for it to complete
         if (isSupabaseConfigured()) {
@@ -91,11 +96,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { success: false, message: 'Votre compte a été désactivé/rejeté. Veuillez contacter un administrateur.' };
         }
 
+        const canManageStock = profile.role === 'admin' ? true : Boolean(profile.can_manage_stock);
         const loggedUser: User = { 
           email: profile.email, 
           role: profile.role as UserRole, 
           fullName: profile.full_name || 'Utilisateur',
-          avatar: profile.avatar || undefined
+          avatar: profile.avatar || undefined,
+          canManageStock
         };
 
         setUser(loggedUser);
@@ -133,11 +140,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { success: false, message: 'Votre compte a été désactivé/rejeté. Veuillez contacter un administrateur.' };
         }
 
+        const canManageStock = account.role === 'admin' ? true : Boolean(account.canManageStock);
         const loggedUser: User = { 
           email: account.email, 
           role: account.role, 
           fullName: account.fullName,
-          avatar: account.avatar
+          avatar: account.avatar,
+          canManageStock
         };
 
         setUser(loggedUser);
@@ -165,10 +174,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const switchRole = (role: UserRole) => {
     if (user) {
-      const updatedUser = { ...user, role };
+      const accounts = LocalDbStore.getAccounts();
+      const account = accounts.find(a => a.email.toLowerCase() === user.email.toLowerCase());
+      const canManageStock = role === 'admin' ? true : Boolean(account?.canManageStock);
+      const updatedUser = { ...user, role, canManageStock };
       setUser(updatedUser);
       window.localStorage.setItem('boucherie_user', JSON.stringify(updatedUser));
       LocalDbStore.setCurrentUserRole(role);
+    }
+  };
+
+  const refreshUserPermissions = () => {
+    if (user) {
+      const accounts = LocalDbStore.getAccounts();
+      const account = accounts.find(a => a.email.toLowerCase() === user.email.toLowerCase());
+      const canManageStock = user.role === 'admin' ? true : Boolean(account?.canManageStock);
+      if (canManageStock !== user.canManageStock) {
+        const updatedUser = { ...user, canManageStock };
+        setUser(updatedUser);
+        window.localStorage.setItem('boucherie_user', JSON.stringify(updatedUser));
+      }
     }
   };
 
@@ -269,7 +294,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, switchRole, updateProfile }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, switchRole, updateProfile, refreshUserPermissions }}>
       {children}
     </AuthContext.Provider>
   );
