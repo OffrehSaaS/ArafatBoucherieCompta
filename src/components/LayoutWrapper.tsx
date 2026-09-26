@@ -96,7 +96,7 @@ export const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ childre
           </button>
           
           <span className="text-md font-bold tracking-wider bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
-            ARAFAT COMPTA
+            DE GESTION
           </span>
 
           <div className="flex items-center space-x-1.5 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">

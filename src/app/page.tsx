@@ -34,10 +34,10 @@ export default function LandingPage() {
             className="flex items-center space-x-3"
           >
             <div className="w-12 h-12 rounded-2xl bg-slate-900/60 border border-slate-800 p-1 flex items-center justify-center shadow-md">
-              <img src="/logo.png" alt="Arafat Compta Logo" className="w-full h-full object-contain" />
+              <img src="/logo.png" alt="DE Gestion Logo" className="w-full h-full object-contain" />
             </div>
             <span className="text-xl font-extrabold tracking-wider bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-              ARAFAT COMPTA
+              DE GESTION
             </span>
           </motion.div>
 
@@ -103,7 +103,7 @@ export default function LandingPage() {
               <div className="w-2.5 h-2.5 bg-rose-500/40 rounded-full" />
               <div className="w-2.5 h-2.5 bg-amber-500/40 rounded-full" />
               <div className="w-2.5 h-2.5 bg-emerald-500/40 rounded-full" />
-              <span className="text-[9px] text-slate-600 pl-3">arafat-boucherie-dashboard.app</span>
+              <span className="text-[9px] text-slate-600 pl-3">de-gestion-dashboard.app</span>
             </div>
 
             {/* Dashboard Mockup Grid Layout */}

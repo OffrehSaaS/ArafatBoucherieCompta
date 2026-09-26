@@ -208,7 +208,7 @@ export default function RapportsPage() {
     const link = document.createElement('a');
     link.href = url;
     link.target = '_blank';
-    link.setAttribute('download', `Rapport_${period}_BoucherieArafat.csv`);
+    link.setAttribute('download', `Rapport_${period}_DE_Gestion.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -217,7 +217,7 @@ export default function RapportsPage() {
 
   const getReportText = () => {
     const periodLabel = period === 'day' ? 'Journalier' : period === 'week' ? 'Hebdomadaire' : period === 'month' ? 'Mensuel' : 'Annuel';
-    return `ARAFAT COMPTA - Rapport Financier (${periodLabel})
+    return `DE GESTION - Rapport Financier (${periodLabel})
 Date : ${new Date().toLocaleDateString('fr-FR')}
 
 • Chiffre d'Affaires Brut (Ventes) : +${formatFCFA(totalSales)}
@@ -265,7 +265,7 @@ BÉNÉFICE NET EN COURS : ${formatFCFA(netBenefit)}`;
     const periodLabel = period === 'day' ? 'Journalier' : period === 'week' ? 'Hebdomadaire' : period === 'month' ? 'Mensuel' : 'Annuel';
     if (typeof navigator !== 'undefined' && (navigator as any).share) {
       (navigator as any).share({
-        title: `Rapport Financier ${periodLabel} - Boucherie Arafat`,
+        title: `Rapport Financier ${periodLabel} - DE Gestion`,
         text: text,
       }).catch((err: any) => {
         console.error('Erreur lors du partage', err);
@@ -326,7 +326,7 @@ BÉNÉFICE NET EN COURS : ${formatFCFA(netBenefit)}`;
 
       {/* Print-only Header */}
       <div className="hidden print:block text-center border-b pb-6 mb-6">
-        <h1 className="text-2xl font-bold">ARAFAT COMPTA - RAPPORT FINANCIER D'EXPLOITATION</h1>
+        <h1 className="text-2xl font-bold">DE GESTION - RAPPORT FINANCIER D'EXPLOITATION</h1>
         <p className="text-sm text-gray-500 mt-1">
           Bilan de Période : {period === 'day' ? 'Journalier' : period === 'week' ? 'Hebdomadaire' : period === 'month' ? 'Mensuel' : 'Annuel'}
         </p>

@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
   const { user, logout, switchRole } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [butcheryName, setButcheryName] = useState('ARAFAT COMPTA');
+  const [butcheryName, setButcheryName] = useState('DE GESTION');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
 
   useEffect(() => {

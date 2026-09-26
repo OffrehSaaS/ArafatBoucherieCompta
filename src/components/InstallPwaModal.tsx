@@ -134,7 +134,7 @@ export const InstallPwaModal: React.FC = () => {
                   <div className="relative">
                     <img
                       src="/logo.png"
-                      alt="Arafat Compta"
+                      alt="DE Gestion"
                       className="w-12 h-12 rounded-2xl object-contain bg-slate-950 p-1 border border-slate-800 shadow-lg"
                     />
                     <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-md">
@@ -143,7 +143,7 @@ export const InstallPwaModal: React.FC = () => {
                   </div>
                   <div>
                     <div className="flex items-center space-x-1.5">
-                      <h4 className="text-xs font-black text-white uppercase tracking-wider">Arafat Compta</h4>
+                      <h4 className="text-xs font-black text-white uppercase tracking-wider">DE Gestion</h4>
                       <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-md">App</span>
                     </div>
                     <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">

@@ -1,6 +1,6 @@
 # 🥩 ArafatBoucherieCompta — Identifiants d'Accès
 
-Ce document récapitule les comptes d'accès pré-configurés pour se connecter et tester l'application **Arafat Compta**.
+Ce document récapitule les comptes d'accès pré-configurés pour se connecter et tester l'application **DE Gestion**.
 
 ---
 

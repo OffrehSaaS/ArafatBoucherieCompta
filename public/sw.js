@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arafat-compta-v3';
+const CACHE_NAME = 'de-gestion-v1';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

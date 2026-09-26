@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Arafat Compta - Boucherie",
-  "short_name": "Arafat Compta",
+  "name": "DE Gestion - Boucherie",
+  "short_name": "DE Gestion",
   "description": "Application SaaS de comptabilité, gestion des stocks au frigo, dépenses et caisse journalière pour boucheries.",
   "start_url": "/",
   "scope": "/",

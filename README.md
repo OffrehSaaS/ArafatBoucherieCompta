@@ -1,4 +1,4 @@
-# 🥩 ArafatBoucherieCompta (Arafat Compta)
+# 🥩 DE Gestion (ArafatBoucherieCompta)
 
 Application moderne de gestion comptable et opérationnelle sur-mesure pour boucheries.
 

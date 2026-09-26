@@ -6,7 +6,7 @@ Ce document sert de mémoire persistante et de guide d'accueil pour tout agent o
 
 ## 📋 1. Présentation de l'Application
 
-**ArafatBoucherieCompta** (nom commercial : *Arafat Compta*) est une application web moderne de gestion comptable et opérationnelle conçue sur-mesure pour les boucheries. Elle a pour but de remplacer le cahier papier traditionnel en offrant un suivi en temps réel des stocks, des ventes, des dépenses opérationnelles, des salaires du personnel et du solde de caisse journalier.
+**ArafatBoucherieCompta** (nom commercial : *DE Gestion*) est une application web moderne de gestion comptable et opérationnelle conçue sur-mesure pour les boucheries. Elle a pour but de remplacer le cahier papier traditionnel en offrant un suivi en temps réel des stocks, des ventes, des dépenses opérationnelles, des salaires du personnel et du solde de caisse journalier.
 
 L'application intègre une gestion des rôles (**Admin** et **Vendeur**) avec des accès restreints et sécurisés pour chaque profil.
 

@@ -24,13 +24,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "ARAFAT COMPTA - Gestion de Boucherie",
+  title: "DE GESTION - Gestion de Boucherie",
   description: "SaaS de comptabilité, facturation, inventaire et gestion de personnel pour boucherie moderne.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Arafat Compta",
+    title: "DE Gestion",
   },
   icons: {
     icon: [
@@ -56,8 +56,8 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Arafat Compta" />
-        <meta name="application-name" content="Arafat Compta" />
+        <meta name="apple-mobile-web-app-title" content="DE Gestion" />
+        <meta name="application-name" content="DE Gestion" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} h-full antialiased bg-slate-950 text-slate-400 font-sans`}>

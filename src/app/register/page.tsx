@@ -177,7 +177,7 @@ export default function RegisterPage() {
           </Link>
           <div className="flex items-center space-x-1">
             <Boxes size={16} className="text-emerald-400" />
-            <span className="text-[10px] font-extrabold text-slate-300 tracking-wider">ARAFAT COMPTA</span>
+            <span className="text-[10px] font-extrabold text-slate-300 tracking-wider">DE GESTION</span>
           </div>
         </div>
 
