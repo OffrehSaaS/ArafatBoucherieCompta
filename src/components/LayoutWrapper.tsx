@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Sidebar } from './Sidebar';
+import { InstallPwaModal } from './InstallPwaModal';
 import { Menu, ShieldCheck, UserCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -56,7 +57,12 @@ export const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // If we are on a public page, render directly
   if (isPublicPage) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <InstallPwaModal />
+      </>
+    );
   }
 
   // If not logged in and not public page, redirecting (render spinner)
@@ -70,6 +76,9 @@ export const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <div className="min-h-screen bg-slate-950 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+      {/* Install PWA Modal and Prompts */}
+      <InstallPwaModal />
+
       {/* Sidebar navigation */}
       <div className="print:hidden">
         <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />

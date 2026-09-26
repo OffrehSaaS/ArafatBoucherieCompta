@@ -105,14 +105,17 @@ export default function LoginPage() {
             <ArrowLeft size={14} />
             <span>Accueil</span>
           </Link>
-          <div className="flex items-center space-x-1">
-            <Boxes size={16} className="text-emerald-400" />
+          <div className="flex items-center space-x-2">
+            <img src="/logo.png" alt="Arafat Compta" className="w-5 h-5 rounded-full object-contain" />
             <span className="text-[10px] font-extrabold text-slate-300 tracking-wider">ARAFAT COMPTA</span>
           </div>
         </div>
 
         {/* Header */}
         <div className="text-center">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-900/60 border border-slate-800 p-2 flex items-center justify-center mb-3 shadow-md">
+            <img src="/logo.png" alt="Arafat Compta Logo" className="w-full h-full object-contain" />
+          </div>
           <h2 className="text-2xl font-black tracking-tight text-white">
             Connexion
           </h2>

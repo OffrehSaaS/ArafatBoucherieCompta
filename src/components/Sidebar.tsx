@@ -29,7 +29,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Smartphone
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -94,6 +95,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
     router.refresh();
   };
 
+  const handleOpenInstallGuide = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('open-pwa-install-guide'));
+    }
+  };
+
   const isOriginalAdmin = user ? LocalDbStore.getAccounts().find(a => a.email.toLowerCase() === user.email.toLowerCase())?.role === 'admin' : false;
 
   const sidebarContent = (
@@ -101,12 +108,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
       {/* Brand Header */}
       <div className="flex items-center justify-between p-4 border-b border-slate-850 h-16">
         <div className="flex items-center space-x-2">
-          <div className="bg-emerald-500 p-1.5 rounded-lg text-slate-900 flex items-center justify-center shrink-0 w-9 h-9">
-            {companyLogo ? (
-              <img src={companyLogo} className="w-8 h-8 object-contain rounded" alt="Logo" />
-            ) : (
-              <Boxes className="h-5 w-5 font-bold" />
-            )}
+          <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center justify-center shrink-0 w-9 h-9 overflow-hidden shadow-inner">
+            <img src={companyLogo || "/logo.png"} className="w-full h-full object-contain rounded-full" alt="Logo" />
           </div>
           {(!isCollapsed || mobileOpen) && (
             <motion.span 
@@ -208,6 +211,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
               </button>
             )}
           </div>
+        )}
+
+        {/* Install Mobile App Button */}
+        {(!isCollapsed || mobileOpen) ? (
+          <button
+            onClick={handleOpenInstallGuide}
+            className="flex items-center justify-center space-x-2 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/20 hover:to-teal-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-xs transition-all duration-150 cursor-pointer shadow-sm group"
+          >
+            <Smartphone size={15} className="group-hover:scale-110 transition-transform" />
+            <span>Installer l'App Mobile</span>
+          </button>
+        ) : (
+          <button
+            onClick={handleOpenInstallGuide}
+            className="flex items-center justify-center p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 transition-colors w-full"
+            title="Installer sur Android / Mobile"
+          >
+            <Smartphone size={18} />
+          </button>
         )}
 
         {/* Global Toolbar */}

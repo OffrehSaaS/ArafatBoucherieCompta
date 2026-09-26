@@ -33,8 +33,8 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center space-x-3"
           >
-            <div className="p-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-2xl shadow-inner">
-              <Boxes size={28} className="animate-pulse" />
+            <div className="w-12 h-12 rounded-2xl bg-slate-900/60 border border-slate-800 p-1 flex items-center justify-center shadow-md">
+              <img src="/logo.png" alt="Arafat Compta Logo" className="w-full h-full object-contain" />
             </div>
             <span className="text-xl font-extrabold tracking-wider bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
               ARAFAT COMPTA
