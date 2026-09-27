@@ -278,14 +278,19 @@ export default function DashboardPage() {
   const todayRestants = filteredRestants.filter(r => r.createdAt.startsWith(filterDateStr));
   const dailyStockRestantVal = todayRestants.reduce((acc, r) => acc + r.totalValue, 0);
 
-  // Current Caisse endingCash & startingCash
-  const registries = cashRegistries.filter(r => r.date === filterDateStr);
-  const caisseActuelle = registries.length > 0 
-    ? registries[0].endingCash 
-    : (cashRegistries.length > 0 ? [...cashRegistries].sort((a,b) => b.date.localeCompare(a.date))[0].endingCash : 150000);
-  const startingCash = registries.length > 0
-    ? registries[0].startingCash
-    : (cashRegistries.length > 0 ? [...cashRegistries].sort((a,b) => b.date.localeCompare(a.date))[0].startingCash : 150000);
+  // Current Caisse endingCash & startingCash (Personal vendor caisse vs Admin general caisse)
+  const targetRegistry = isAdmin
+    ? (cashRegistries.find(r => r.date === filterDateStr && (r.vendorName === 'Générale' || !r.vendorName)) ||
+       cashRegistries.find(r => r.date === filterDateStr))
+    : cashRegistries.find(r => r.date === filterDateStr && r.vendorName === user?.fullName);
+
+  const startingCash = targetRegistry 
+    ? targetRegistry.startingCash 
+    : (isAdmin ? 150000 : 0);
+
+  const caisseActuelle = targetRegistry
+    ? targetRegistry.endingCash
+    : (isAdmin ? 150000 : (startingCash + dailyCA - dailyExpenses));
 
   // Stock values (For sellers, represents the value of their stock in possession)
   const totalStockValue = isAdmin
@@ -343,7 +348,12 @@ export default function DashboardPage() {
   });
 
   // --- CHART 2: EXPENSES PIE CHART ---
-  const expenseCategories = ['Eau', 'Tomates', 'Cube', 'Maggi', 'Piment', 'Huile', 'Oignons', 'Charbon', 'Transport', 'Glace', 'Salaires', 'Pertes', 'Divers'];
+  const expenseCategories = [
+    'Eau', 'Tomates', 'Cube', 'Maggi', 'Piment', 'Huile', 
+    'Oignons', 'Charbon', 'Transport', 'Glace', 
+    ...(isAdmin ? ['Salaires'] : []), 
+    'Pertes', 'Divers'
+  ];
   const expenseDataPie = expenseCategories.map(cat => {
     const catExpenses = filteredExpenses.filter(e => e.category === cat);
     const total = catExpenses.reduce((acc, e) => acc + e.amount, 0);

@@ -50,7 +50,7 @@ export default function DepensesPage() {
 
   const categories = [
     'Eau', 'Tomates', 'Cube', 'Maggi', 'Piment', 'Huile', 
-    'Oignons', 'Charbon', 'Transport', 'Glace', 'Salaires', 'Pertes', 'Divers'
+    'Oignons', 'Charbon', 'Transport', 'Glace', ...(isAdmin ? ['Salaires'] : []), 'Pertes', 'Divers'
   ];
 
   useEffect(() => {
@@ -166,6 +166,13 @@ export default function DepensesPage() {
 
   // Filter expenses
   const filteredExpenses = expenses.filter(e => {
+    // If not admin, vendor cannot see salaries or other vendors' expenses
+    if (!isAdmin) {
+      if (e.category === 'Salaires') return false;
+      if (user?.fullName && e.recordedBy && e.recordedBy.toLowerCase() !== user.fullName.toLowerCase()) {
+        return false;
+      }
+    }
     const itemDate = e.createdAt.split('T')[0];
     const matchStart = !startDateFilter || itemDate >= startDateFilter;
     const matchEnd = !endDateFilter || itemDate <= endDateFilter;

@@ -172,14 +172,28 @@ export interface Salary {
   createdAt: string;
 }
 
+export interface VendorDailyStockItem {
+  productId: string;
+  productName: string;
+  unitPrice: number;
+  initialQuantity: number; // Quantité prise au frigo pour la journée
+  soldQuantity: number;    // Quantité vendue aujourd'hui
+  remainingQuantity: number; // Quantité restante en étal
+  outputIds: string[];
+  isClosed: boolean;
+}
+
 export interface CashRegistry {
   id: string;
   date: string; // YYYY-MM-DD
-  startingCash: number;
-  salesTotal: number;
-  expensesTotal: number;
-  salariesTotal: number;
-  endingCash: number;
+  vendorName?: string; // Nom du vendeur pour sa caisse quotidienne ('Fatoumata Barry', 'Amadou Diallo', ou 'Générale' pour admin)
+  vendorId?: string;
+  startingCash: number; // Montant en espèces confié le matin par l'admin
+  salesTotal: number; // Total des ventes de ce vendeur
+  expensesTotal: number; // Total des dépenses de ce vendeur
+  salariesTotal: number; // 0 pour les vendeurs
+  endingCash: number; // startingCash + salesTotal - expensesTotal
+  status?: 'ouverte' | 'cloturee';
   createdAt: string;
 }
 
@@ -256,8 +270,10 @@ const MOCK_SALARIES: Salary[] = [
 ];
 
 const MOCK_CASH_REGISTRIES: CashRegistry[] = [
-  { id: 'cash-1', date: '2026-07-12', startingCash: 150000, salesTotal: 154500, expensesTotal: 28000, salariesTotal: 8000, endingCash: 268500, createdAt: '2026-07-12T07:00:00Z' },
-  { id: 'cash-2', date: '2026-07-13', startingCash: 268500, salesTotal: 192100, expensesTotal: 18000, salariesTotal: 0, endingCash: 442600, createdAt: '2026-07-13T07:00:00Z' }
+  { id: 'cash-v-1', date: '2026-07-12', vendorName: 'Fatoumata Barry', startingCash: 25000, salesTotal: 154500, expensesTotal: 5000, salariesTotal: 0, endingCash: 174500, status: 'cloturee', createdAt: '2026-07-12T07:00:00Z' },
+  { id: 'cash-v-2', date: '2026-07-13', vendorName: 'Fatoumata Barry', startingCash: 30000, salesTotal: 192100, expensesTotal: 0, salariesTotal: 0, endingCash: 222100, status: 'ouverte', createdAt: '2026-07-13T07:00:00Z' },
+  { id: 'cash-1', date: '2026-07-12', vendorName: 'Générale', startingCash: 150000, salesTotal: 154500, expensesTotal: 28000, salariesTotal: 8000, endingCash: 268500, status: 'cloturee', createdAt: '2026-07-12T07:00:00Z' },
+  { id: 'cash-2', date: '2026-07-13', vendorName: 'Générale', startingCash: 150000, salesTotal: 192100, expensesTotal: 18000, salariesTotal: 0, endingCash: 324100, status: 'ouverte', createdAt: '2026-07-13T07:00:00Z' }
 ];
 
 const MOCK_LOGS: ActivityLog[] = [
@@ -1744,86 +1760,150 @@ export class LocalDbStore {
 
   static recalculateCaisseForDate(dateStr: string) {
     const registries = this.getCashRegistries();
-    let index = registries.findIndex(r => r.date === dateStr);
-
+    const accounts = this.getAccounts();
     const sales = this.getSales().filter(s => s.createdAt.startsWith(dateStr));
     const dayExpensesRaw = this.getExpenses().filter(e => e.createdAt.startsWith(dateStr));
-    const expensesTotal = dayExpensesRaw.filter(e => e.category !== 'Salaires' && e.category !== 'Pertes').reduce((acc, e) => acc + e.amount, 0);
-    const lossesTotal = dayExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
     const salaries = this.getSalaries().filter(s => s.paidAt === dateStr);
 
-    const salesTotal = sales.reduce((acc, s) => acc + s.totalAmount, 0);
-    const salariesTotal = salaries.reduce((acc, s) => acc + s.amountPaid, 0);
+    // 1. Recalculate each vendor's individual caisse
+    const vendorNamesSet = new Set<string>();
+    accounts.filter(a => a.role === 'vendeur').forEach(a => vendorNamesSet.add(a.fullName));
+    sales.forEach(s => { if (s.sellerName) vendorNamesSet.add(s.sellerName); });
+    registries.filter(r => r.date === dateStr && r.vendorName && r.vendorName !== 'Générale').forEach(r => vendorNamesSet.add(r.vendorName!));
 
-    const products = this.getProducts();
-    const stockValue = products.reduce((acc, p) => acc + (p.quantity * p.unitPrice), 0);
+    vendorNamesSet.forEach(vName => {
+      const vSales = sales.filter(s => s.sellerName === vName);
+      const vSalesTotal = vSales.reduce((acc, s) => acc + s.totalAmount, 0);
+      const vExpenses = dayExpensesRaw.filter(e => e.recordedBy === vName && e.category !== 'Salaires' && e.category !== 'Pertes');
+      const vExpensesTotal = vExpenses.reduce((acc, e) => acc + e.amount, 0);
 
-    const debts = this.getDebts();
-    const totalRemainingDebts = debts.reduce((acc, d) => acc + d.remainingAmount, 0);
-
-    let startingCash = 0;
-    if (index === -1) {
-      // Find the most recent day before dateStr
-      const sortedRegs = [...registries]
-        .filter(r => r.date < dateStr)
-        .sort((a, b) => b.date.localeCompare(a.date));
-      if (sortedRegs.length > 0) {
-        startingCash = sortedRegs[0].endingCash;
+      const vRegIndex = registries.findIndex(r => r.date === dateStr && r.vendorName === vName);
+      if (vRegIndex === -1) {
+        const newVReg: CashRegistry = {
+          id: generateId('cash-v'),
+          date: dateStr,
+          vendorName: vName,
+          startingCash: 0,
+          salesTotal: vSalesTotal,
+          expensesTotal: vExpensesTotal,
+          salariesTotal: 0, // Vendors do NOT see or have salaries in their personal cash drawer
+          endingCash: vSalesTotal - vExpensesTotal,
+          status: 'ouverte',
+          createdAt: new Date().toISOString()
+        };
+        registries.push(newVReg);
       } else {
-        startingCash = 150000; // default starting cash if first day ever
+        const vReg = registries[vRegIndex];
+        vReg.salesTotal = vSalesTotal;
+        vReg.expensesTotal = vExpensesTotal;
+        vReg.salariesTotal = 0; // Strictly 0 for vendor personal cash drawer
+        vReg.endingCash = (vReg.startingCash || 0) + vSalesTotal - vExpensesTotal;
       }
+    });
 
-      const newReg: CashRegistry = {
-        id: generateId('cash'),
+    // 2. Recalculate general / admin caisse
+    const totalSales = sales.reduce((acc, s) => acc + s.totalAmount, 0);
+    const totalExpenses = dayExpensesRaw.filter(e => e.category !== 'Salaires' && e.category !== 'Pertes').reduce((acc, e) => acc + e.amount, 0);
+    const totalSalaries = salaries.reduce((acc, s) => acc + s.amountPaid, 0);
+
+    let genIndex = registries.findIndex(r => r.date === dateStr && (r.vendorName === 'Générale' || !r.vendorName));
+    if (genIndex === -1) {
+      const vendorRegs = registries.filter(r => r.date === dateStr && r.vendorName && r.vendorName !== 'Générale');
+      const sumStarting = vendorRegs.reduce((acc, r) => acc + (r.startingCash || 0), 0) || 150000;
+      const newGenReg: CashRegistry = {
+        id: generateId('cash-gen'),
         date: dateStr,
-        startingCash,
-        salesTotal,
-        expensesTotal,
-        salariesTotal,
-        endingCash: startingCash + salesTotal + stockValue - expensesTotal - salariesTotal - totalRemainingDebts - lossesTotal,
+        vendorName: 'Générale',
+        startingCash: sumStarting,
+        salesTotal: totalSales,
+        expensesTotal: totalExpenses,
+        salariesTotal: totalSalaries,
+        endingCash: sumStarting + totalSales - totalExpenses - totalSalaries,
+        status: 'ouverte',
         createdAt: new Date().toISOString()
       };
-      registries.push(newReg);
+      registries.push(newGenReg);
     } else {
-      const reg = registries[index];
-      reg.salesTotal = salesTotal;
-      reg.expensesTotal = expensesTotal;
-      reg.salariesTotal = salariesTotal;
-      reg.endingCash = reg.startingCash + salesTotal + stockValue - expensesTotal - salariesTotal - totalRemainingDebts - lossesTotal;
+      const genReg = registries[genIndex];
+      genReg.salesTotal = totalSales;
+      genReg.expensesTotal = totalExpenses;
+      genReg.salariesTotal = totalSalaries;
+      genReg.endingCash = (genReg.startingCash || 0) + totalSales - totalExpenses - totalSalaries;
     }
 
-    // Sort registries chronologically and cascade ending balance to next day's starting balance
-    const sortedRegs = [...registries].sort((a, b) => a.date.localeCompare(b.date));
-    for (let i = 0; i < sortedRegs.length; i++) {
-      const regDate = sortedRegs[i].date;
-      const regExpensesRaw = this.getExpenses().filter(e => e.createdAt.startsWith(regDate));
-      const regLossesTotal = regExpensesRaw.filter(e => e.category === 'Pertes').reduce((acc, e) => acc + e.amount, 0);
-
-      if (i > 0) {
-        sortedRegs[i].startingCash = sortedRegs[i - 1].endingCash;
-      }
-      sortedRegs[i].endingCash = sortedRegs[i].startingCash + sortedRegs[i].salesTotal + stockValue - sortedRegs[i].expensesTotal - sortedRegs[i].salariesTotal - totalRemainingDebts - regLossesTotal;
-    }
-
-    setLocalStorageData('boucherie_cash_registries', sortedRegs);
-    for (const reg of sortedRegs) {
+    setLocalStorageData('boucherie_cash_registries', registries);
+    for (const reg of registries.filter(r => r.date === dateStr)) {
       this.syncToSupabase('cash_registry', 'upsert', reg);
     }
   }
 
-  static updateStartingCash(date: string, amount: number, userName: string) {
+  static assignVendorStartingCash(date: string, vendorName: string, amount: number, adminName: string): CashRegistry {
     const registries = this.getCashRegistries();
-    const index = registries.findIndex(r => r.date === date);
+    let reg = registries.find(r => r.date === date && r.vendorName === vendorName);
+
+    const sales = this.getSales().filter(s => s.createdAt.startsWith(date) && s.sellerName === vendorName);
+    const salesTotal = sales.reduce((acc, s) => acc + s.totalAmount, 0);
+    const expenses = this.getExpenses().filter(e => e.createdAt.startsWith(date) && e.recordedBy === vendorName && e.category !== 'Salaires' && e.category !== 'Pertes');
+    const expensesTotal = expenses.reduce((acc, e) => acc + e.amount, 0);
+
+    if (!reg) {
+      reg = {
+        id: generateId('cash-v'),
+        date,
+        vendorName,
+        startingCash: amount,
+        salesTotal,
+        expensesTotal,
+        salariesTotal: 0,
+        endingCash: amount + salesTotal - expensesTotal,
+        status: 'ouverte',
+        createdAt: new Date().toISOString()
+      };
+      registries.push(reg);
+    } else {
+      reg.startingCash = amount;
+      reg.salesTotal = salesTotal;
+      reg.expensesTotal = expensesTotal;
+      reg.endingCash = amount + salesTotal - expensesTotal;
+    }
+
+    setLocalStorageData('boucherie_cash_registries', registries);
+    this.syncToSupabase('cash_registry', 'upsert', reg);
+    this.addActivityLog('Attribution Caisse', `Caisse de départ de ${amount} FCFA attribuée à ${vendorName} pour le ${date}`, adminName);
+
+    // Update general caisse starting sum
+    const vendorRegs = registries.filter(r => r.date === date && r.vendorName && r.vendorName !== 'Générale');
+    const sumStarting = vendorRegs.reduce((acc, r) => acc + (r.startingCash || 0), 0);
+    let genReg = registries.find(r => r.date === date && (r.vendorName === 'Générale' || !r.vendorName));
+    if (genReg) {
+      genReg.startingCash = sumStarting;
+      genReg.endingCash = sumStarting + genReg.salesTotal - genReg.expensesTotal - genReg.salariesTotal;
+      setLocalStorageData('boucherie_cash_registries', registries);
+      this.syncToSupabase('cash_registry', 'upsert', genReg);
+    }
+
+    this.recalculateCaisseForDate(date);
+    return reg;
+  }
+
+  static updateStartingCash(date: string, amount: number, userName: string, vendorName?: string) {
+    if (vendorName && vendorName !== 'Générale') {
+      return this.assignVendorStartingCash(date, vendorName, amount, userName);
+    }
+    const registries = this.getCashRegistries();
+    const index = registries.findIndex(r => r.date === date && (r.vendorName === 'Générale' || !r.vendorName));
     let targetReg: CashRegistry;
     if (index === -1) {
       targetReg = {
         id: generateId('cash'),
         date,
+        vendorName: 'Générale',
         startingCash: amount,
         salesTotal: 0,
         expensesTotal: 0,
         salariesTotal: 0,
         endingCash: amount,
+        status: 'ouverte',
         createdAt: new Date().toISOString()
       };
       registries.push(targetReg);
@@ -1834,8 +1914,51 @@ export class LocalDbStore {
     }
     setLocalStorageData('boucherie_cash_registries', registries);
     this.syncToSupabase('cash_registry', 'upsert', targetReg);
-    this.addActivityLog('Caisse Départ', `Caisse de départ du ${date} modifiée à ${amount} FCFA par l'admin.`, userName);
+    this.addActivityLog('Caisse Départ', `Caisse de départ générale du ${date} modifiée à ${amount} FCFA par l'admin.`, userName);
     this.recalculateCaisseForToday();
+    return targetReg;
+  }
+
+  // 10. Vendor Daily Stock helper
+  static getVendorDailyStock(vendorName: string, dateStr: string): VendorDailyStockItem[] {
+    const outputs = this.getOutputs().filter(o => o.employeeName === vendorName && o.createdAt.startsWith(dateStr));
+    const sales = this.getSales().filter(s => s.sellerName === vendorName && s.createdAt.startsWith(dateStr));
+
+    const map: { [productId: string]: VendorDailyStockItem } = {};
+
+    for (const out of outputs) {
+      if (!map[out.productId]) {
+        map[out.productId] = {
+          productId: out.productId,
+          productName: out.productName,
+          unitPrice: out.unitPrice,
+          initialQuantity: 0,
+          soldQuantity: 0,
+          remainingQuantity: 0,
+          outputIds: [],
+          isClosed: out.status === 'valide'
+        };
+      }
+      map[out.productId].initialQuantity += out.quantity;
+      map[out.productId].outputIds.push(out.id);
+      if (out.status === 'valide') {
+        map[out.productId].soldQuantity += (out.soldQuantity || 0);
+        map[out.productId].remainingQuantity += (out.remainingQuantity || 0);
+      }
+    }
+
+    // For open stock, count sales
+    for (const pId of Object.keys(map)) {
+      const item = map[pId];
+      if (!item.isClosed) {
+        const prodSales = sales.filter(s => s.productId === pId);
+        const totalSold = prodSales.reduce((acc, s) => acc + s.quantity, 0);
+        item.soldQuantity = totalSold;
+        item.remainingQuantity = Math.max(0, item.initialQuantity - totalSold);
+      }
+    }
+
+    return Object.values(map);
   }
 
   static deleteCashRegistry(id: string, userName: string) {
@@ -2095,15 +2218,31 @@ export class LocalDbStore {
 
     const account = accounts[index];
     account.role = role;
-    if (role === 'admin') {
-      account.canManageStock = true;
-    }
+    account.canManageStock = role === 'admin';
     setLocalStorageData('boucherie_accounts', accounts);
     this.syncToSupabase('profiles', 'update', { id, role, can_manage_stock: account.canManageStock });
 
+    // Update active user in localStorage if matching
+    if (typeof window !== 'undefined') {
+      const savedUserStr = window.localStorage.getItem('boucherie_user');
+      if (savedUserStr) {
+        try {
+          const savedUser = JSON.parse(savedUserStr);
+          if (savedUser.email?.toLowerCase() === account.email.toLowerCase()) {
+            savedUser.role = role;
+            savedUser.canManageStock = account.canManageStock;
+            window.localStorage.setItem('boucherie_user', JSON.stringify(savedUser));
+            this.setCurrentUserRole(role);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
     this.addActivityLog(
       'Rôle Compte',
-      `Le rôle de ${account.fullName} a été changé en ${role === 'admin' ? 'Administrateur' : 'Vendeur'} par ${userName}`,
+      `Le rôle de ${account.fullName} a été changé en ${role === 'admin' ? 'Administrateur (accès frigo accordé)' : 'Vendeur (stock individuel)'} par ${userName}`,
       userName
     );
     return account;

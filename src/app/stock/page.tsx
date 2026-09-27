@@ -31,7 +31,7 @@ type TabType = 'current' | 'history' | 'catalog' | 'categories';
 export default function StockPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const canManageStock = isAdmin || Boolean(user?.canManageStock);
+  const canManageStock = isAdmin;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -437,7 +437,7 @@ export default function StockPage() {
         </div>
         <h2 className="text-xl font-black text-white">Accès Restreint au Stock Frigo</h2>
         <p className="text-slate-400 text-sm max-w-sm mt-2">
-          Le Stock au frigo est sous le contrôle exclusif de l'administrateur principal. Vous devez obtenir une autorisation accordée par l'administrateur pour pouvoir y accéder et le manipuler.
+          Le Stock au frigo est sous le contrôle exclusif de l'administrateur. Les vendeurs n'ont pas accès au stock au frigo. Un administrateur peut vous attribuer le rôle d'Admin dans la gestion des employés pour vous donner accès au stock du frigo.
         </p>
       </div>
     );

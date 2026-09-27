@@ -25,6 +25,7 @@ export default function SortiesPage() {
 
   // Filters State
   const [searchTerm, setSearchTerm] = useState('');
+  const [vendorFilter, setVendorFilter] = useState('All');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
 
@@ -249,6 +250,11 @@ export default function SortiesPage() {
 
   // Filter outputs
   const filteredOutputs = outputs.filter(o => {
+    // If user is a vendor, they ONLY see their own daily stock sorties
+    if (user?.role !== 'admin' && o.employeeName !== user?.fullName) return false;
+    // If admin, can filter by specific vendor or see all
+    if (user?.role === 'admin' && vendorFilter !== 'All' && o.employeeName !== vendorFilter) return false;
+
     const itemDate = o.createdAt.split('T')[0];
     const matchStart = !startDateFilter || itemDate >= startDateFilter;
     const matchEnd = !endDateFilter || itemDate <= endDateFilter;
@@ -259,6 +265,9 @@ export default function SortiesPage() {
   });
 
   const selectedProduct = products.find(p => p.id === productId);
+  const totalQtySorties = filteredOutputs.reduce((acc, o) => acc + o.quantity, 0);
+  const totalQtyVendue = filteredOutputs.reduce((acc, o) => acc + (o.status === 'valide' ? (o.soldQuantity || 0) : 0), 0);
+  const totalQtyRestante = filteredOutputs.reduce((acc, o) => acc + (o.status === 'valide' ? (o.remainingQuantity || 0) : o.quantity), 0);
   const totalSortiesValue = filteredOutputs.reduce((acc, o) => acc + (o.quantity * o.unitPrice), 0);
   const totalSalesValue = filteredOutputs.filter(o => o.status === 'valide').reduce((acc, o) => acc + o.totalAmount, 0);
 
@@ -297,25 +306,29 @@ export default function SortiesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center">
-            <ArrowUpRight className="text-rose-450 mr-2 h-8 w-8" />
-            Sortie du Frigo Début de Journée
+            <ArrowUpRight className="text-emerald-450 mr-2 h-8 w-8" />
+            {user?.role === 'admin' ? 'Sorties du Frigo & Stocks Vendeurs' : `Mon Stock du Jour`}
           </h1>
-          <p className="text-slate-400 mt-1">Enregistrez les sorties matinales de produits du frigo pour la vente du jour.</p>
+          <p className="text-slate-400 mt-1">
+            {user?.role === 'admin' 
+              ? "Supervisez et attribuez les stocks de viande du frigo à chaque vendeur."
+              : `Stock de la journée attribué à ${user?.fullName}. Vendez vos pièces et clôturez vos invendus en fin de journée.`}
+          </p>
         </div>
 
         <button
           onClick={handleOpenModal}
-          className="flex items-center justify-center space-x-2 px-4 py-3 bg-rose-500 hover:bg-rose-450 text-white rounded-2xl font-bold shadow-lg shadow-rose-950/20 cursor-pointer text-xs transition-colors"
+          className="flex items-center justify-center space-x-2 px-4 py-3 bg-emerald-500 hover:bg-emerald-450 text-slate-950 rounded-2xl font-bold shadow-lg shadow-emerald-500/10 cursor-pointer text-xs transition-colors"
         >
           <Plus size={18} />
-          <span>Déclarer une Sortie</span>
+          <span>{user?.role === 'admin' ? 'Attribuer du Stock à un Vendeur' : 'Prendre du Stock au Frigo'}</span>
         </button>
       </div>
 
       {/* Filters Bar */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
         {/* Search Input */}
-        <div className="relative lg:col-span-6">
+        <div className={`relative ${user?.role === 'admin' ? 'lg:col-span-4' : 'lg:col-span-6'}`}>
           <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
             <Search size={16} />
           </span>
@@ -324,9 +337,25 @@ export default function SortiesPage() {
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder="Rechercher une sortie (Produit, employé, raison...)"
-            className="w-full pl-9 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-rose-500 transition-colors"
+            className="w-full pl-9 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
           />
         </div>
+
+        {/* Vendor Filter (Admin only) */}
+        {user?.role === 'admin' && (
+          <div className="relative lg:col-span-2">
+            <select
+              value={vendorFilter}
+              onChange={e => setVendorFilter(e.target.value)}
+              className="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
+            >
+              <option value="All">Tous les vendeurs</option>
+              {employeeCandidates.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Date Du */}
         <div className="flex items-center space-x-2 lg:col-span-2">
@@ -335,7 +364,7 @@ export default function SortiesPage() {
             type="date"
             value={startDateFilter}
             onChange={e => setStartDateFilter(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-rose-500 transition-colors"
+            className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors"
           />
         </div>
 
@@ -346,18 +375,19 @@ export default function SortiesPage() {
             type="date"
             value={endDateFilter}
             onChange={e => setEndDateFilter(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-rose-500 transition-colors"
+            className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors"
           />
         </div>
 
         {/* Reset button */}
-        {(startDateFilter || endDateFilter) && (
+        {(startDateFilter || endDateFilter || vendorFilter !== 'All') && (
           <button
             onClick={() => {
               setStartDateFilter('');
               setEndDateFilter('');
+              setVendorFilter('All');
             }}
-            className="lg:col-span-2 py-2 bg-slate-850 hover:bg-slate-800 text-rose-400 hover:text-rose-450 border border-slate-800 rounded-xl font-bold text-xs cursor-pointer transition-colors text-center"
+            className="lg:col-span-2 py-2 bg-slate-850 hover:bg-slate-800 text-emerald-400 hover:text-emerald-350 border border-slate-800 rounded-xl font-bold text-xs cursor-pointer transition-colors text-center"
           >
             Reset
           </button>
@@ -365,14 +395,22 @@ export default function SortiesPage() {
       </div>
 
       {/* Sum Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-slate-900 border border-slate-850 p-4 rounded-2xl">
-          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">Valeur Initiale des Sorties Frigo</span>
-          <p className="text-xl font-black text-rose-450 mt-1">{formatFCFA(totalSortiesValue)}</p>
+          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">Qté Reçue du Frigo</span>
+          <p className="text-xl font-black text-rose-450 mt-1">{totalQtySorties} <span className="text-xs font-normal text-slate-400">pcs</span></p>
         </div>
         <div className="bg-slate-900 border border-slate-850 p-4 rounded-2xl">
-          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">Total des Ventes Clôturées</span>
-          <p className="text-xl font-black text-emerald-450 mt-1">{formatFCFA(totalSalesValue)}</p>
+          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">Qté Vendue</span>
+          <p className="text-xl font-black text-emerald-400 mt-1">{totalQtyVendue} <span className="text-xs font-normal text-slate-400">pcs</span></p>
+        </div>
+        <div className="bg-slate-900 border border-slate-850 p-4 rounded-2xl">
+          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">Stock Restant (Étal)</span>
+          <p className="text-xl font-black text-teal-400 mt-1">{totalQtyRestante} <span className="text-xs font-normal text-slate-400">pcs</span></p>
+        </div>
+        <div className="bg-slate-900 border border-slate-850 p-4 rounded-2xl">
+          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block">Valeur Confiée</span>
+          <p className="text-xl font-black text-white mt-1">{formatFCFA(totalSortiesValue)}</p>
         </div>
       </div>
 

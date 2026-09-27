@@ -181,6 +181,11 @@ export default function StockRestantPage() {
 
   // Filter stock restants
   const filteredRestants = stockRestants.filter(r => {
+    if (user?.role !== 'admin') {
+      if (user?.fullName && r.recordedBy && r.recordedBy.toLowerCase() !== user.fullName.toLowerCase()) {
+        return false;
+      }
+    }
     const itemDate = r.createdAt.split('T')[0];
     const matchStart = !startDateFilter || itemDate >= startDateFilter;
     const matchEnd = !endDateFilter || itemDate <= endDateFilter;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { LocalDbStore, Product, Sale } from '@/lib/db/store';
+import { LocalDbStore, Product, Sale, VendorDailyStockItem } from '@/lib/db/store';
 import { formatFCFA, formatDate, formatTime } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -22,11 +22,14 @@ import {
 
 export default function VentesPage() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [vendorDailyStock, setVendorDailyStock] = useState<VendorDailyStockItem[]>([]);
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('');
+  const [vendorFilter, setVendorFilter] = useState('All');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
 
@@ -56,28 +59,50 @@ export default function VentesPage() {
   }, []);
 
   const loadData = () => {
-    setProducts(LocalDbStore.getProducts());
-    setSales(LocalDbStore.getSales().sort((a,b) => b.createdAt.localeCompare(a.createdAt)));
+    const prods = LocalDbStore.getProducts();
+    const allSales = LocalDbStore.getSales().sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+    const todayStr = new Date().toISOString().split('T')[0];
+    const vStock = LocalDbStore.getVendorDailyStock(user?.fullName || '', todayStr);
+    setProducts(prods);
+    setSales(allSales);
+    setVendorDailyStock(vStock);
     setSelectedIds([]);
   };
 
   const handleOpenModal = () => {
     const prods = LocalDbStore.getProducts();
-    const availableProds = prods.filter(p => p.quantity > 0);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isVendor = user?.role !== 'admin';
+    const vStock = isVendor ? LocalDbStore.getVendorDailyStock(user?.fullName || '', todayStr) : [];
+    
     setProducts(prods);
+    setVendorDailyStock(vStock);
     setEditingSale(null);
     
-    if (availableProds.length > 0) {
-      setProductId(availableProds[0].id);
-      setUnitPrice(availableProds[0].unitPrice);
+    if (isVendor) {
+      const activeVStock = vStock.filter(v => v.remainingQuantity > 0);
+      if (activeVStock.length > 0) {
+        setProductId(activeVStock[0].productId);
+        setUnitPrice(activeVStock[0].unitPrice);
+      } else {
+        setProductId('');
+        setUnitPrice(0);
+      }
     } else {
-      setProductId('');
-      setUnitPrice(0);
+      const availableProds = prods.filter(p => p.quantity > 0);
+      if (availableProds.length > 0) {
+        setProductId(availableProds[0].id);
+        setUnitPrice(availableProds[0].unitPrice);
+      } else {
+        setProductId('');
+        setUnitPrice(0);
+      }
     }
+
     setQuantity(0);
     setTotalAmountState(0);
     setPaymentMethod('Espèces');
-    setSaleDate(new Date().toISOString().split('T')[0]);
+    setSaleDate(todayStr);
     setError('');
     setIsModalOpen(true);
   };
@@ -194,13 +219,29 @@ export default function VentesPage() {
       return;
     }
 
-    // Direct sale stock checking
-    if (!editingSale || !editingSale.sourceSortieId) {
-      // Revert editingSale original quantity to check stock properly if we are modifying
-      const currentAvailable = selectedProduct.quantity + (editingSale && editingSale.productId === productId ? editingSale.quantity : 0);
-      if (currentAvailable < quantity) {
-        setError(`Stock insuffisant. Quantité disponible : ${currentAvailable} pcs.`);
+    const isVendor = !isAdmin;
+    const todayStr = saleDate || new Date().toISOString().split('T')[0];
+    const currentVendorStock = isVendor ? LocalDbStore.getVendorDailyStock(user?.fullName || '', todayStr) : [];
+    const vendorItem = isVendor ? currentVendorStock.find(v => v.productId === productId) : null;
+
+    if (isVendor) {
+      if (!vendorItem || vendorItem.initialQuantity <= 0) {
+        setError(`Vous n'avez pas de ${selectedProduct.name} dans votre stock du jour. Allez dans 'Mon Stock du Jour' pour prélever cette viande au frigo.`);
         return;
+      }
+      const availableInStall = vendorItem.remainingQuantity + (editingSale && editingSale.productId === productId ? editingSale.quantity : 0);
+      if (quantity > availableInStall) {
+        setError(`Quantité indisponible dans votre stock du jour. Disponible en étal : ${availableInStall} pcs.`);
+        return;
+      }
+    } else {
+      // Direct sale stock checking for admin from fridge
+      if (!editingSale || !editingSale.sourceSortieId) {
+        const currentAvailable = selectedProduct.quantity + (editingSale && editingSale.productId === productId ? editingSale.quantity : 0);
+        if (currentAvailable < quantity) {
+          setError(`Stock au frigo insuffisant. Quantité disponible : ${currentAvailable} pcs.`);
+          return;
+        }
       }
     }
 
@@ -217,7 +258,7 @@ export default function VentesPage() {
       if (editingSale) {
         LocalDbStore.updateSale(editingSale.id, payload, user?.fullName || 'Vendeur');
       } else {
-        LocalDbStore.addSale(payload, user?.fullName || 'Vendeur');
+        LocalDbStore.addSale(payload, user?.fullName || 'Vendeur', isVendor);
       }
       setIsModalOpen(false);
       loadData();
@@ -228,6 +269,10 @@ export default function VentesPage() {
 
   // Filter sales
   const filteredSales = sales.filter(s => {
+    // A vendor only sees their own sales
+    if (!isAdmin && s.sellerName !== user?.fullName) return false;
+    if (isAdmin && vendorFilter !== 'All' && s.sellerName !== vendorFilter) return false;
+
     const itemDate = s.createdAt.split('T')[0];
     const matchStart = !startDateFilter || itemDate >= startDateFilter;
     const matchEnd = !endDateFilter || itemDate <= endDateFilter;
@@ -264,7 +309,7 @@ export default function VentesPage() {
       {/* Filters Bar */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
         {/* Search Input */}
-        <div className="relative lg:col-span-6">
+        <div className={`relative ${isAdmin ? 'lg:col-span-4' : 'lg:col-span-6'}`}>
           <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
             <Search size={16} />
           </span>
@@ -276,6 +321,22 @@ export default function VentesPage() {
             className="w-full pl-9 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
           />
         </div>
+
+        {/* Vendor Filter (Admin only) */}
+        {isAdmin && (
+          <div className="relative lg:col-span-2">
+            <select
+              value={vendorFilter}
+              onChange={e => setVendorFilter(e.target.value)}
+              className="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
+            >
+              <option value="All">Tous les vendeurs</option>
+              {Array.from(new Set(sales.map(s => s.sellerName))).map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Date Du */}
         <div className="flex items-center space-x-2 lg:col-span-2">
@@ -300,13 +361,14 @@ export default function VentesPage() {
         </div>
 
         {/* Reset button */}
-        {(startDateFilter || endDateFilter) && (
+        {(startDateFilter || endDateFilter || vendorFilter !== 'All') && (
           <button
             onClick={() => {
               setStartDateFilter('');
               setEndDateFilter('');
+              setVendorFilter('All');
             }}
-            className="lg:col-span-2 py-2 bg-slate-850 hover:bg-slate-800 text-rose-455 hover:text-rose-450 border border-slate-800 rounded-xl font-bold text-xs cursor-pointer transition-colors text-center"
+            className="lg:col-span-2 py-2 bg-slate-850 hover:bg-slate-800 text-emerald-400 hover:text-emerald-350 border border-slate-800 rounded-xl font-bold text-xs cursor-pointer transition-colors text-center"
           >
             Reset
           </button>
@@ -498,7 +560,9 @@ export default function VentesPage() {
               <form onSubmit={handleSave} className="space-y-4 mt-4">
                 {/* Select Product */}
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Sélectionner un Produit</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                    {!isAdmin ? "Produit (Mon Stock de la Journée)" : "Sélectionner un Produit (Frigo)"}
+                  </label>
                   <select
                     value={productId}
                     onChange={e => handleProductChange(e.target.value)}
@@ -506,11 +570,23 @@ export default function VentesPage() {
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 cursor-pointer disabled:opacity-50"
                   >
                     <option value="" disabled>-- Choisir un produit --</option>
-                    {products.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.quantity} disponibles - {formatFCFA(p.unitPrice)} / unitaire)
-                      </option>
-                    ))}
+                    {!isAdmin ? (
+                      vendorDailyStock.length > 0 ? (
+                        vendorDailyStock.map(p => (
+                          <option key={p.productId} value={p.productId}>
+                            {p.productName} ({p.remainingQuantity} pcs en étal - {formatFCFA(p.unitPrice)}/pc)
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>Aucun stock pris au frigo aujourd'hui</option>
+                      )
+                    ) : (
+                      products.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.quantity} disponibles au frigo - {formatFCFA(p.unitPrice)}/pc)
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -554,10 +630,22 @@ export default function VentesPage() {
                   </div>
                 </div>
 
-                {selectedProduct && (
-                  <span className="text-[10px] text-slate-500 mt-1 block">
-                    Stock disponible au frigo : <span className="font-bold text-emerald-450">{selectedProduct.quantity} pièces</span>
-                  </span>
+                {!isAdmin ? (
+                  vendorDailyStock.find(v => v.productId === productId) ? (
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      Disponible dans votre étal aujourd'hui : <span className="font-bold text-emerald-400">{vendorDailyStock.find(v => v.productId === productId)?.remainingQuantity} pièces</span>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-amber-400 mt-1 block">
+                      ⚠️ Prenez cette viande au frigo dans "Mon Stock du Jour" pour pouvoir la vendre.
+                    </span>
+                  )
+                ) : (
+                  selectedProduct && (
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      Stock disponible au frigo : <span className="font-bold text-emerald-450">{selectedProduct.quantity} pièces</span>
+                    </span>
+                  )
                 )}
 
                 {/* Mode of Payment */}

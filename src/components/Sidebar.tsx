@@ -62,10 +62,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
       name: 'Stock au Frigo', 
       path: '/stock', 
       icon: Boxes, 
-      roles: ['admin', 'vendeur'],
-      requireStockAccess: true 
+      roles: ['admin'] 
     },
-    { name: 'Sortie du Frigo Début de Journée', path: '/sorties', icon: ArrowUpRight, roles: ['admin'] },
+    { 
+      name: user?.role === 'admin' ? 'Sorties & Stocks Vendeurs' : 'Mon Stock du Jour', 
+      path: '/sorties', 
+      icon: ArrowUpRight, 
+      roles: ['admin', 'vendeur'] 
+    },
     { name: 'Ventes', path: '/ventes', icon: ShoppingCart, roles: ['admin', 'vendeur'] },
     { name: 'Dépenses', path: '/depenses', icon: Receipt, roles: ['admin', 'vendeur'] },
     { name: 'Caisse', path: '/caisse', icon: Wallet, roles: ['admin', 'vendeur'] },
@@ -78,9 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
   ];
 
   const filteredItems = menuItems.filter(item => {
-    if (!item.roles.includes(user?.role || 'vendeur')) return false;
-    if (item.requireStockAccess && user?.role !== 'admin' && !user?.canManageStock) return false;
-    return true;
+    return item.roles.includes(user?.role || 'vendeur');
   });
 
   const handleLinkClick = (path: string) => {

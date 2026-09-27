@@ -483,6 +483,16 @@ export default function EmployesPage() {
             <span className="text-[10px] text-slate-500">{accounts.length} comptes au total</span>
           </div>
 
+          <div className="mx-5 p-3.5 bg-slate-950/60 border border-slate-800 rounded-2xl flex items-start space-x-3 text-xs">
+            <Info size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+            <div className="text-slate-400 space-y-0.5">
+              <p className="font-bold text-slate-200">Gestion de l'accès au Stock Frigo par rôle</p>
+              <p className="text-[11px] leading-relaxed">
+                Seuls les utilisateurs au rôle <span className="text-emerald-400 font-semibold">Admin</span> ont accès au Stock au Frigo. Pour accorder l'accès au frigo à un vendeur, attribuez-lui simplement le rôle d'Admin ci-dessous. Les vendeurs standard disposent de leur propre stock de la journée et de leur caisse individuelle.
+              </p>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
@@ -490,7 +500,7 @@ export default function EmployesPage() {
                   <th className="py-4 px-6">Nom</th>
                   <th className="py-4 px-6">Adresse Email</th>
                   <th className="py-4 px-6">Téléphone</th>
-                  <th className="py-4 px-6">Rôle</th>
+                  <th className="py-4 px-6">Rôle & Attribution</th>
                   <th className="py-4 px-6 text-center">Accès Stock Frigo</th>
                   <th className="py-4 px-6">Statut d'Accès</th>
                   <th className="py-4 px-6">Date de Création</th>
@@ -506,52 +516,41 @@ export default function EmployesPage() {
                       <td className="py-4 px-6 text-slate-450">{acc.phone}</td>
                       <td className="py-4 px-6">
                         {acc.email === user?.email ? (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            Admin
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center">
+                            <ShieldCheck size={11} className="mr-1" />
+                            Admin Principal
                           </span>
                         ) : (
-                          <select
-                            value={acc.role}
-                            onChange={(e) => handleRoleChange(acc.id, e.target.value as 'admin' | 'vendeur')}
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer ${
-                              acc.role === 'admin' 
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            }`}
-                          >
-                            <option value="vendeur" className="bg-slate-900 text-amber-400">Vendeur</option>
-                            <option value="admin" className="bg-slate-900 text-emerald-400">Admin</option>
-                          </select>
+                          <div className="flex flex-col space-y-1">
+                            <select
+                              value={acc.role}
+                              onChange={(e) => handleRoleChange(acc.id, e.target.value as 'admin' | 'vendeur')}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer ${
+                                acc.role === 'admin' 
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
+                                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                              }`}
+                            >
+                              <option value="vendeur" className="bg-slate-900 text-amber-400">Vendeur (Stock Quotidien)</option>
+                              <option value="admin" className="bg-slate-900 text-emerald-400">Admin (Accès Stock Frigo)</option>
+                            </select>
+                            <span className="text-[9px] text-slate-500">
+                              {acc.role === 'admin' ? 'A accès au Stock Frigo' : 'Stock & Caisse individuels'}
+                            </span>
+                          </div>
                         )}
                       </td>
                       <td className="py-4 px-6 text-center">
                         {acc.role === 'admin' ? (
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            <ShieldCheck size={12} className="mr-1" />
-                            Contrôle Total (Admin)
+                            <ShieldCheck size={12} className="mr-1 text-emerald-400" />
+                            Accès Autorisé
                           </span>
                         ) : (
-                          <button
-                            onClick={() => handleToggleStockAccess(acc.id)}
-                            className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all duration-150 cursor-pointer border ${
-                              acc.canManageStock
-                                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/30'
-                                : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:bg-slate-750 hover:text-white'
-                            }`}
-                            title={acc.canManageStock ? "Cliquer pour révoquer le contrôle du Stock au Frigo" : "Cliquer pour accorder le contrôle du Stock au Frigo"}
-                          >
-                            {acc.canManageStock ? (
-                              <>
-                                <CheckCircle2 size={13} className="text-emerald-400" />
-                                <span>Autorisé</span>
-                              </>
-                            ) : (
-                              <>
-                                <Lock size={13} className="text-slate-500" />
-                                <span>Non autorisé</span>
-                              </>
-                            )}
-                          </button>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-slate-800 text-slate-400 border border-slate-700">
+                            <Lock size={12} className="mr-1 text-slate-500" />
+                            Non Autorisé (Vendeur)
+                          </span>
                         )}
                       </td>
                       <td className="py-4 px-6">
