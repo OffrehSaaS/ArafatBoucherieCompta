@@ -206,21 +206,9 @@ export interface ActivityLog {
 }
 
 // Initial mock data to seed the store if localStorage is empty
-const MOCK_SUPPLIERS: Supplier[] = [
-  { id: 'sup-1', name: 'Sani Élevage', phone: '+226 70 00 11 22', address: 'Ouagadougou, Secteur 30', notes: 'Fournisseur principal de viande de boeuf.', createdAt: '2026-07-01T08:00:00Z' },
-  { id: 'sup-2', name: 'Ferme des Collines', phone: '+226 76 11 22 33', address: 'Bobo-Dioulasso, Zone Industrielle', notes: 'Fournisseur de porc de qualité.', createdAt: '2026-07-02T09:00:00Z' },
-  { id: 'sup-3', name: 'Mamadou & Fils', phone: '+226 78 22 33 44', address: 'Dori', notes: 'Fournisseur de moutons et chèvres.', createdAt: '2026-07-03T10:30:00Z' },
-  { id: 'sup-4', name: 'Ferme Avicole Ouedraogo', phone: '+226 75 33 44 55', address: 'Koudougou', notes: 'Fournisseur de volailles et oeufs.', createdAt: '2026-07-04T14:15:00Z' },
-  { id: 'sup-5', name: 'Maison Charcutière', phone: '+226 71 44 55 66', address: 'Ouagadougou', notes: 'Saucisses et produits transformés.', createdAt: '2026-07-05T11:00:00Z' }
-];
+const MOCK_SUPPLIERS: Supplier[] = [];
 
-const MOCK_PRODUCTS: Product[] = [
-  { id: 'prod-1', name: 'Filet de Boeuf', category: 'Viande de Boeuf', unitPrice: 3500, quantity: 0, supplierId: 'sup-1', observations: 'Excellente qualité, très tendre.', createdAt: '2026-07-05T08:00:00Z', updatedAt: '2026-07-12T18:00:00Z' },
-  { id: 'prod-2', name: 'Côtes de Porc', category: 'Viande de Porc', unitPrice: 2800, quantity: 0, supplierId: 'sup-2', observations: 'Garder bien au frais.', createdAt: '2026-07-05T08:15:00Z', updatedAt: '2026-07-12T18:00:00Z' },
-  { id: 'prod-3', name: 'Gigot d\'Agneau', category: 'Viande d\'Agneau', unitPrice: 4200, quantity: 0, supplierId: 'sup-3', observations: 'Commande spéciale pour le weekend.', createdAt: '2026-07-06T10:00:00Z', updatedAt: '2026-07-12T18:00:00Z' },
-  { id: 'prod-4', name: 'Poulet Entier Local', category: 'Volaille', unitPrice: 2500, quantity: 0, supplierId: 'sup-4', observations: 'Poulets nettoyés et emballés.', createdAt: '2026-07-07T09:30:00Z', updatedAt: '2026-07-12T18:00:00Z' },
-  { id: 'prod-5', name: 'Saucisses de Boeuf', category: 'Charcuterie', unitPrice: 3000, quantity: 0, supplierId: 'sup-5', observations: 'Fumées et épicées.', createdAt: '2026-07-07T11:45:00Z', updatedAt: '2026-07-12T18:00:00Z' }
-];
+const MOCK_PRODUCTS: Product[] = [];
 
 const MOCK_EMPLOYEES: Employee[] = [];
 
@@ -239,6 +227,34 @@ const MOCK_SALARIES: Salary[] = [];
 const MOCK_CASH_REGISTRIES: CashRegistry[] = [];
 
 const MOCK_LOGS: ActivityLog[] = [];
+
+// Clean reset versioning: ensure any client browser clears old mock/demo data
+const DB_RESET_VERSION_KEY = 'boucherie_db_clean_reset_v4';
+if (typeof window !== 'undefined') {
+  try {
+    if (!window.localStorage.getItem(DB_RESET_VERSION_KEY)) {
+      const keysToClean = [
+        'boucherie_products',
+        'boucherie_suppliers',
+        'boucherie_employees',
+        'boucherie_categories',
+        'boucherie_cash_registries',
+        'boucherie_sales',
+        'boucherie_expenses',
+        'boucherie_outputs',
+        'boucherie_stock_restant',
+        'boucherie_debts',
+        'boucherie_debt_payments',
+        'boucherie_salaries',
+        'boucherie_activity_logs'
+      ];
+      keysToClean.forEach(key => window.localStorage.removeItem(key));
+      window.localStorage.setItem(DB_RESET_VERSION_KEY, 'true');
+    }
+  } catch (e) {
+    console.error('Erreur migration reset localStorage:', e);
+  }
+}
 
 // Helper to initialize local storage
 const getLocalStorageData = <T>(key: string, initialData: T): T => {
@@ -326,7 +342,8 @@ export class LocalDbStore {
         rSalaries,
         rCashRegistries,
         rLogs,
-        rProfiles
+        rProfiles,
+        rCategories
       ] = await Promise.all([
         supabase.from('suppliers').select('*'),
         supabase.from('products').select('*'),
@@ -340,7 +357,8 @@ export class LocalDbStore {
         supabase.from('salaries').select('*'),
         supabase.from('cash_registry').select('*'),
         supabase.from('activity_logs').select('*'),
-        supabase.from('profiles').select('*')
+        supabase.from('profiles').select('*'),
+        supabase.from('categories').select('*')
       ]);
 
       // 1. Load basic entities list to resolve names
@@ -505,14 +523,21 @@ export class LocalDbStore {
         const cashRegistries = rCashRegistries.data.map((cr) => ({
           id: cr.id,
           date: cr.date,
-          startingCash: Number(cr.starting_cash),
-          salesTotal: Number(cr.sales_total),
-          expensesTotal: Number(cr.expenses_total),
-          salariesTotal: Number(cr.salaries_total),
-          endingCash: Number(cr.ending_cash),
+          vendorName: cr.vendor_name || 'Générale',
+          startingCash: Number(cr.starting_cash || 0),
+          salesTotal: Number(cr.sales_total || 0),
+          expensesTotal: Number(cr.expenses_total || 0),
+          salariesTotal: Number(cr.salaries_total || 0),
+          endingCash: Number(cr.ending_cash || 0),
+          status: cr.status || 'ouverte',
           createdAt: cr.created_at
         }));
         setLocalStorageData('boucherie_cash_registries', cashRegistries);
+      }
+
+      if (rCategories && rCategories.data) {
+        const catNames = rCategories.data.map((c: any) => c.name).filter(Boolean);
+        setLocalStorageData('boucherie_categories', catNames);
       }
 
       if (rLogs.data) {
@@ -1767,7 +1792,7 @@ export class LocalDbStore {
     let genIndex = registries.findIndex(r => r.date === dateStr && (r.vendorName === 'Générale' || !r.vendorName));
     if (genIndex === -1) {
       const vendorRegs = registries.filter(r => r.date === dateStr && r.vendorName && r.vendorName !== 'Générale');
-      const sumStarting = vendorRegs.reduce((acc, r) => acc + (r.startingCash || 0), 0) || 150000;
+      const sumStarting = vendorRegs.reduce((acc, r) => acc + (r.startingCash || 0), 0);
       const newGenReg: CashRegistry = {
         id: generateId('cash-gen'),
         date: dateStr,
@@ -1976,7 +2001,7 @@ export class LocalDbStore {
   }
 
   static getCategories(): string[] {
-    return getLocalStorageData('boucherie_categories', ['Viande de Boeuf', 'Viande de Porc', 'Viande d\'Agneau', 'Volaille', 'Charcuterie']);
+    return getLocalStorageData('boucherie_categories', []);
   }
 
   static addCategory(name: string, userName: string): string[] {

@@ -286,11 +286,11 @@ export default function DashboardPage() {
 
   const startingCash = targetRegistry 
     ? targetRegistry.startingCash 
-    : (isAdmin ? 150000 : 0);
+    : 0;
 
   const caisseActuelle = targetRegistry
     ? targetRegistry.endingCash
-    : (isAdmin ? 150000 : (startingCash + dailyCA - dailyExpenses));
+    : (startingCash + dailyCA - dailyExpenses);
 
   // Stock values (For sellers, represents the value of their stock in possession)
   const totalStockValue = isAdmin

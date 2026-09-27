@@ -107,10 +107,6 @@ export default function CaissePage() {
       }
     });
 
-    if (list.length === 0) {
-      list.push({ id: 'Fatoumata Barry', name: 'Fatoumata Barry' });
-    }
-
     return list;
   }, [accounts, registries]);
 
