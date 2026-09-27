@@ -215,72 +215,30 @@ const MOCK_SUPPLIERS: Supplier[] = [
 ];
 
 const MOCK_PRODUCTS: Product[] = [
-  { id: 'prod-1', name: 'Filet de Boeuf', category: 'Viande de Boeuf', unitPrice: 3500, quantity: 150, supplierId: 'sup-1', observations: 'Excellente qualité, très tendre.', createdAt: '2026-07-05T08:00:00Z', updatedAt: '2026-07-12T18:00:00Z' },
-  { id: 'prod-2', name: 'Côtes de Porc', category: 'Viande de Porc', unitPrice: 2800, quantity: 80, supplierId: 'sup-2', observations: 'Garder bien au frais.', createdAt: '2026-07-05T08:15:00Z', updatedAt: '2026-07-12T18:00:00Z' },
-  { id: 'prod-3', name: 'Gigot d\'Agneau', category: 'Viande d\'Agneau', unitPrice: 4200, quantity: 45, supplierId: 'sup-3', observations: 'Commande spéciale pour le weekend.', createdAt: '2026-07-06T10:00:00Z', updatedAt: '2026-07-12T18:00:00Z' },
-  { id: 'prod-4', name: 'Poulet Entier Local', category: 'Volaille', unitPrice: 2500, quantity: 120, supplierId: 'sup-4', observations: 'Poulets nettoyés et emballés.', createdAt: '2026-07-07T09:30:00Z', updatedAt: '2026-07-12T18:00:00Z' },
-  { id: 'prod-5', name: 'Saucisses de Boeuf', category: 'Charcuterie', unitPrice: 3000, quantity: 60, supplierId: 'sup-5', observations: 'Fumées et épicées.', createdAt: '2026-07-07T11:45:00Z', updatedAt: '2026-07-12T18:00:00Z' }
+  { id: 'prod-1', name: 'Filet de Boeuf', category: 'Viande de Boeuf', unitPrice: 3500, quantity: 0, supplierId: 'sup-1', observations: 'Excellente qualité, très tendre.', createdAt: '2026-07-05T08:00:00Z', updatedAt: '2026-07-12T18:00:00Z' },
+  { id: 'prod-2', name: 'Côtes de Porc', category: 'Viande de Porc', unitPrice: 2800, quantity: 0, supplierId: 'sup-2', observations: 'Garder bien au frais.', createdAt: '2026-07-05T08:15:00Z', updatedAt: '2026-07-12T18:00:00Z' },
+  { id: 'prod-3', name: 'Gigot d\'Agneau', category: 'Viande d\'Agneau', unitPrice: 4200, quantity: 0, supplierId: 'sup-3', observations: 'Commande spéciale pour le weekend.', createdAt: '2026-07-06T10:00:00Z', updatedAt: '2026-07-12T18:00:00Z' },
+  { id: 'prod-4', name: 'Poulet Entier Local', category: 'Volaille', unitPrice: 2500, quantity: 0, supplierId: 'sup-4', observations: 'Poulets nettoyés et emballés.', createdAt: '2026-07-07T09:30:00Z', updatedAt: '2026-07-12T18:00:00Z' },
+  { id: 'prod-5', name: 'Saucisses de Boeuf', category: 'Charcuterie', unitPrice: 3000, quantity: 0, supplierId: 'sup-5', observations: 'Fumées et épicées.', createdAt: '2026-07-07T11:45:00Z', updatedAt: '2026-07-12T18:00:00Z' }
 ];
 
-const MOCK_EMPLOYEES: Employee[] = [
-  { id: 'emp-1', firstName: 'Alassane', lastName: 'Traoré', phone: '+226 72 00 99 88', hireDate: '2025-01-10', position: 'Boucher Principal', active: true, workingDays: [true, true, true, true, true, true, false], createdAt: '2025-01-10T08:00:00Z' },
-  { id: 'emp-2', firstName: 'Fatoumata', lastName: 'Barry', phone: '+226 73 11 22 33', hireDate: '2025-03-01', position: 'Caissière / Vendeuse', active: true, workingDays: [true, true, true, true, true, true, true], createdAt: '2025-03-01T08:00:00Z' },
-  { id: 'emp-3', firstName: 'Moussa', lastName: 'Sawadogo', phone: '+226 74 22 33 44', hireDate: '2025-05-15', position: 'Assistant Boucher', active: true, workingDays: [true, true, true, true, true, true, false], createdAt: '2025-05-15T08:00:00Z' }
-];
+const MOCK_EMPLOYEES: Employee[] = [];
 
-const MOCK_DEBTS: Debt[] = [
-  { id: 'debt-1', supplierId: 'sup-1', supplierName: 'Sani Élevage', totalAmount: 450000, paidAmount: 150000, remainingAmount: 300000, dueDate: '2026-07-20', status: 'Partiellement payée', createdAt: '2026-07-05T09:00:00Z' },
-  { id: 'debt-2', supplierId: 'sup-2', supplierName: 'Ferme des Collines', totalAmount: 120000, paidAmount: 120000, remainingAmount: 0, dueDate: '2026-07-10', status: 'Payée', createdAt: '2026-07-08T10:00:00Z' }
-];
+const MOCK_DEBTS: Debt[] = [];
 
-const MOCK_DEBT_PAYMENTS: DebtPayment[] = [
-  { id: 'pay-1', debtId: 'debt-1', amountPaid: 150000, recordedBy: 'Administrateur', createdAt: '2026-07-05T15:00:00Z' },
-  { id: 'pay-2', debtId: 'debt-2', amountPaid: 120000, recordedBy: 'Administrateur', createdAt: '2026-07-10T11:00:00Z' }
-];
+const MOCK_DEBT_PAYMENTS: DebtPayment[] = [];
 
-// Generates historical dates based on current time (which is 2026-07-13)
-const MOCK_SALES: Sale[] = [
-  { id: 'sale-1', productId: 'prod-1', productName: 'Filet de Boeuf', quantity: 15, unitPrice: 3500, totalAmount: 52500, paymentMethod: 'Espèces', sellerName: 'Fatoumata Barry', createdAt: '2026-07-12T09:15:00Z' },
-  { id: 'sale-2', productId: 'prod-2', productName: 'Côtes de Porc', quantity: 10, unitPrice: 2800, totalAmount: 28000, paymentMethod: 'Mobile Money', sellerName: 'Fatoumata Barry', createdAt: '2026-07-12T10:45:00Z' },
-  { id: 'sale-3', productId: 'prod-4', productName: 'Poulet Entier Local', quantity: 20, unitPrice: 2500, totalAmount: 50000, paymentMethod: 'Espèces', sellerName: 'Fatoumata Barry', createdAt: '2026-07-12T14:30:00Z' },
-  { id: 'sale-4', productId: 'prod-5', productName: 'Saucisses de Boeuf', quantity: 8, unitPrice: 3000, totalAmount: 24000, paymentMethod: 'Carte', sellerName: 'Fatoumata Barry', createdAt: '2026-07-12T17:10:00Z' },
-  { id: 'sale-5', productId: 'prod-1', productName: 'Filet de Boeuf', quantity: 22, unitPrice: 3500, totalAmount: 77000, paymentMethod: 'Espèces', sellerName: 'Fatoumata Barry', createdAt: '2026-07-13T08:30:00Z' },
-  { id: 'sale-6', productId: 'prod-3', productName: 'Gigot d\'Agneau', quantity: 5, unitPrice: 4200, totalAmount: 21000, paymentMethod: 'Mobile Money', sellerName: 'Fatoumata Barry', createdAt: '2026-07-13T10:00:00Z' },
-  { id: 'sale-7', productId: 'prod-4', productName: 'Poulet Entier Local', quantity: 15, unitPrice: 2500, totalAmount: 37500, paymentMethod: 'Espèces', sellerName: 'Fatoumata Barry', createdAt: '2026-07-13T11:20:00Z' },
-  { id: 'sale-8', productId: 'prod-2', productName: 'Côtes de Porc', quantity: 12, unitPrice: 2800, totalAmount: 33600, paymentMethod: 'Carte', sellerName: 'Fatoumata Barry', createdAt: '2026-07-13T14:10:00Z' },
-  { id: 'sale-9', productId: 'prod-5', productName: 'Saucisses de Boeuf', quantity: 10, unitPrice: 3000, totalAmount: 30000, paymentMethod: 'Espèces', sellerName: 'Fatoumata Barry', createdAt: '2026-07-13T16:00:00Z' }
-];
+const MOCK_SALES: Sale[] = [];
 
-const MOCK_EXPENSES: Expense[] = [
-  { id: 'exp-1', amount: 15000, category: 'Charbon', description: '2 sacs de charbon pour le nettoyage/cuisson.', recordedBy: 'Alassane Traoré', createdAt: '2026-07-12T08:30:00Z' },
-  { id: 'exp-2', amount: 8000, category: 'Glace', description: 'Glace pour conservation viande agneau.', recordedBy: 'Moussa Sawadogo', createdAt: '2026-07-12T11:00:00Z' },
-  { id: 'exp-3', amount: 5000, category: 'Transport', description: 'Livraison urgence poulet.', recordedBy: 'Fatoumata Barry', createdAt: '2026-07-12T15:30:00Z' },
-  { id: 'exp-4', amount: 12000, category: 'Eau', description: 'Facture ONEA mensuelle.', recordedBy: 'Administrateur', createdAt: '2026-07-13T09:00:00Z' },
-  { id: 'exp-5', amount: 6000, category: 'Oignons', description: '1 sac d\'oignons pour assaisonnement.', recordedBy: 'Alassane Traoré', createdAt: '2026-07-13T10:30:00Z' }
-];
+const MOCK_EXPENSES: Expense[] = [];
 
-const MOCK_OUTPUTS: Output[] = [
-  { id: 'out-1', productId: 'prod-1', productName: 'Filet de Boeuf', quantity: 3, remainingQuantity: 0, soldQuantity: 3, unitPrice: 3500, totalAmount: 10500, employeeName: 'Alassane Traoré', notes: 'Viande avariée retirée.', createdAt: '2026-07-12T18:00:00Z', status: 'valide', paymentMethod: 'Espèces' },
-  { id: 'out-2', productId: 'prod-4', productName: 'Poulet Entier Local', quantity: 5, remainingQuantity: 0, soldQuantity: 5, unitPrice: 2500, totalAmount: 12500, employeeName: 'Moussa Sawadogo', notes: 'Pertes transport.', createdAt: '2026-07-13T15:00:00Z', status: 'valide', paymentMethod: 'Espèces' }
-];
+const MOCK_OUTPUTS: Output[] = [];
 
-const MOCK_SALARIES: Salary[] = [
-  { id: 'sal-1', employeeId: 'emp-1', employeeName: 'Alassane Traoré', dailyWage: 5000, amountPaid: 5000, status: 'Payé', notes: 'Payé à la journée', paidAt: '2026-07-12', createdAt: '2026-07-12T19:00:00Z' },
-  { id: 'sal-2', employeeId: 'emp-3', employeeName: 'Moussa Sawadogo', dailyWage: 3000, amountPaid: 3000, status: 'Payé', notes: 'Payé à la journée', paidAt: '2026-07-12', createdAt: '2026-07-12T19:05:00Z' }
-];
+const MOCK_SALARIES: Salary[] = [];
 
-const MOCK_CASH_REGISTRIES: CashRegistry[] = [
-  { id: 'cash-v-1', date: '2026-07-12', vendorName: 'Fatoumata Barry', startingCash: 25000, salesTotal: 154500, expensesTotal: 5000, salariesTotal: 0, endingCash: 174500, status: 'cloturee', createdAt: '2026-07-12T07:00:00Z' },
-  { id: 'cash-v-2', date: '2026-07-13', vendorName: 'Fatoumata Barry', startingCash: 30000, salesTotal: 192100, expensesTotal: 0, salariesTotal: 0, endingCash: 222100, status: 'ouverte', createdAt: '2026-07-13T07:00:00Z' },
-  { id: 'cash-1', date: '2026-07-12', vendorName: 'Générale', startingCash: 150000, salesTotal: 154500, expensesTotal: 28000, salariesTotal: 8000, endingCash: 268500, status: 'cloturee', createdAt: '2026-07-12T07:00:00Z' },
-  { id: 'cash-2', date: '2026-07-13', vendorName: 'Générale', startingCash: 150000, salesTotal: 192100, expensesTotal: 18000, salariesTotal: 0, endingCash: 324100, status: 'ouverte', createdAt: '2026-07-13T07:00:00Z' }
-];
+const MOCK_CASH_REGISTRIES: CashRegistry[] = [];
 
-const MOCK_LOGS: ActivityLog[] = [
-  { id: 'log-1', action: 'Initialisation', details: 'Système démarré avec les données par défaut.', userName: 'Système', createdAt: '2026-07-12T07:00:00Z' },
-  { id: 'log-2', action: 'Ajout de stock', details: 'Ajout de 150 unités de Filet de Boeuf', userName: 'Administrateur', createdAt: '2026-07-12T08:00:00Z' },
-  { id: 'log-3', action: 'Enregistrement Vente', details: 'Vente de 15 unités de Filet de Boeuf', userName: 'Fatoumata Barry', createdAt: '2026-07-12T09:15:00Z' }
-];
+const MOCK_LOGS: ActivityLog[] = [];
 
 // Helper to initialize local storage
 const getLocalStorageData = <T>(key: string, initialData: T): T => {
@@ -2090,16 +2048,19 @@ export class LocalDbStore {
   // User Account Management
   static getAccounts(): UserAccount[] {
     const DEFAULT_ACCOUNTS: UserAccount[] = [
-      { id: 'acc-superadmin', email: 'superadmin@arafat.com', fullName: 'Super Administrateur', phone: '+226 70 99 99 99', role: 'admin', companyName: 'Boucherie Arafat', password: 'Admin2026!', status: 'active', createdAt: '2026-08-01T08:00:00Z', canManageStock: true },
-      { id: 'acc-1', email: 'admin@arafat.com', fullName: 'Brahim Ould', phone: '+226 70 00 11 22', role: 'admin', companyName: 'Boucherie Arafat', password: 'Admin2026!', status: 'active', createdAt: '2026-07-01T08:00:00Z', canManageStock: true },
-      { id: 'acc-admin-new', email: 'directeur@arafat.com', fullName: 'Directeur Général', phone: '+226 70 12 34 56', role: 'admin', companyName: 'Boucherie Arafat', password: 'Admin2026!', status: 'active', createdAt: '2026-08-01T08:00:00Z', canManageStock: true },
-      { id: 'acc-diner', email: 'admin@dinerexpress.tg', fullName: 'Administrateur Diner Express', phone: '+228 90 00 00 00', role: 'admin', companyName: 'DE Gestion', password: 'Admin2026!', status: 'active', createdAt: '2026-08-01T08:00:00Z', canManageStock: true },
-      { id: 'acc-2', email: 'vendeur@arafat.com', fullName: 'Fatoumata Barry', phone: '+226 73 11 22 33', role: 'vendeur', password: 'Vendeur2026!', status: 'active', createdAt: '2026-07-02T09:00:00Z', canManageStock: false },
-      { id: 'acc-vendeur-new', email: 'amadou@arafat.com', fullName: 'Amadou Diallo', phone: '+226 76 54 32 10', role: 'vendeur', password: 'Vendeur2026!', status: 'active', createdAt: '2026-08-01T09:00:00Z', canManageStock: false },
-      { id: 'acc-3', email: 'moussa@arafat.com', fullName: 'Moussa Sawadogo', phone: '+226 74 22 33 44', role: 'vendeur', password: 'moussa', status: 'pending', createdAt: '2026-07-12T17:30:00Z', canManageStock: false }
+      { id: 'acc-admin-new', email: 'directeur@arafat.com', fullName: 'Directeur Général', phone: '+226 70 12 34 56', role: 'admin', companyName: 'Boucherie Arafat', password: 'Admin2026!', status: 'active', createdAt: '2026-08-01T08:00:00Z', canManageStock: true }
     ];
-    const stored = getLocalStorageData<UserAccount[]>('boucherie_accounts', DEFAULT_ACCOUNTS);
+    let stored = getLocalStorageData<UserAccount[]>('boucherie_accounts', DEFAULT_ACCOUNTS);
     let hasChanges = false;
+
+    // Filter out old deleted test accounts
+    const obsoleteEmails = ['superadmin@arafat.com', 'admin@arafat.com', 'admin@dinerexpress.tg', 'vendeur@arafat.com', 'amadou@arafat.com', 'moussa@arafat.com'];
+    const filteredStored = stored.filter(acc => !obsoleteEmails.includes(acc.email.toLowerCase()));
+    if (filteredStored.length !== stored.length) {
+      stored = filteredStored;
+      hasChanges = true;
+    }
+
     DEFAULT_ACCOUNTS.forEach(defaultAcc => {
       const exists = stored.some(acc => acc.email.toLowerCase() === defaultAcc.email.toLowerCase());
       if (!exists) {

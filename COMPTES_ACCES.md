@@ -1,59 +1,37 @@
-# 🥩 DE Gestion (ArafatBoucherieCompta) — Identifiants d'Accès
+# 🥩 DE Gestion — Accès Directeur Général & Données Réelles
 
-Ce document récapitule tous les comptes d'accès configurés et synchronisés pour se connecter à l'application **DE Gestion** aussi bien en **Production** (Supabase) qu'en **Local** (Démo).
-
----
-
-## ⚡ Remplissage en 1 Clic
-Sur la page de connexion ([/login](file:///c:/Users/DELL/OneDrive/Documents/ArafatBoucherieCompta/src/app/login/page.tsx)), des boutons rapides permettent de pré-remplir automatiquement les identifiants d'un simple clic.
+L'application **DE Gestion** a été initialisée pour démarrer l'enregistrement des **données réelles**. Tous les compteurs opérationnels (ventes, dépenses, caisse, sorties, dettes, salaires) ont été remis à zéro.
 
 ---
 
-## 👑 1. Comptes Administrateurs & Super Admin (Accès Total)
+## 👑 1. Compte Administrateur Unique (Directeur Général)
 
-### 🌟 Compte Super Administrateur :
-- **Email** : `superadmin@arafat.com`
-- **Mot de passe** : `Admin2026!`
-- **Nom** : Super Administrateur
-- **Rôle** : `super_admin` / `admin` (Contrôle total, supervision globale, accès au stock frigo, gestion des rôles, finances et paramètres)
+Tous les anciens comptes de test et de démo ont été supprimés. L'accès unique administrateur est réservé au **Directeur Général** :
 
-### 👔 Compte Directeur Général :
 - **Email** : `directeur@arafat.com`
 - **Mot de passe** : `Admin2026!`
 - **Nom** : Directeur Général
-- **Rôle** : `admin`
+- **Rôle** : `admin` (Accès complet : Supervision globale, Stock au frigo, Attribution de caisse quotidienne, Gestion & Approbation des vendeurs, Dettes, Salaires, Rapports, Paramètres)
 
-### 🛡️ Compte Administrateur Principal :
-- **Email** : `admin@arafat.com`
-- **Mot de passe** : `Admin2026!` *(accepte aussi `admin`)*
-- **Nom** : Brahim Ould
-- **Rôle** : `admin`
-
-### 🏢 Compte Administrateur Diner Express :
-- **Email** : `admin@dinerexpress.tg`
-- **Mot de passe** : `Admin2026!`
-- **Nom** : Administrateur Diner Express
-- **Rôle** : `super_admin` / `admin`
+> ⚡ **Sur la page de connexion ([/login](file:///c:/Users/DELL/OneDrive/Documents/ArafatBoucherieCompta/src/app/login/page.tsx))** : Un bouton permet de pré-remplir les coordonnées du Directeur Général en 1 clic.
 
 ---
 
-## 🛒 2. Comptes Vendeurs (Stock & Caisse Individuels)
+## 🛒 2. Workflow d'Accès pour les Nouveaux Vendeurs
 
-### 👤 Compte Vendeur Principal :
-- **Email** : `vendeur@arafat.com`
-- **Mot de passe** : `Vendeur2026!` *(accepte aussi `vendeur`)*
-- **Nom** : Fatoumata Barry
-- **Rôle** : `vendeur` (Mon Stock du Jour alloué, Ventes, Mon Tiroir Caisse quotidien)
+Pour ajouter un nouveau vendeur dans l'application :
 
-### 👤 Compte Vendeur Adjoint :
-- **Email** : `amadou@arafat.com`
-- **Mot de passe** : `Vendeur2026!`
-- **Nom** : Amadou Diallo
-- **Rôle** : `vendeur`
+1. Le vendeur se rend sur la page **« Créer un compte »** ([/register](file:///c:/Users/DELL/OneDrive/Documents/ArafatBoucherieCompta/src/app/register/page.tsx)) et renseigne ses informations (Nom, Email, Téléphone, Mot de passe).
+2. Son compte est créé avec le statut **« En attente d'approbation »**.
+3. Le **Directeur Général** se connecte et voit la notification sur son **Tableau de Bord** ([/dashboard](file:///c:/Users/DELL/OneDrive/Documents/ArafatBoucherieCompta/src/app/dashboard/page.tsx)) ou dans la section **Personnel & Comptes** ([/employes](file:///c:/Users/DELL/OneDrive/Documents/ArafatBoucherieCompta/src/app/employes/page.tsx)).
+4. Le Directeur clique sur **« Accepter l'accès »**. Le vendeur peut alors se connecter immédiatement pour saisir ses ventes et gérer son stock quotidien.
 
 ---
 
-## 🔒 Confidentialité & Rôles
-1. **Accès Stock au Frigo** : Réservé exclusivement aux administrateurs.
-2. **Caisse Quotidienne** : L'administrateur attribue chaque matin un fond de caisse propre à chaque vendeur.
-3. **Confidentialité** : Les vendeurs ne voient ni les ventes ni la caisse de leurs collègues, et aucun salaire n'est affiché pour les vendeurs.
+## 📊 3. Démarrage des Données Réelles
+
+Tous les compteurs sont à **0** :
+- **Stock au Frigo** : Les quantités sont remises à 0. L'administrateur peut saisir les réceptions réelles via *Stock au Frigo > Nouvelle Entrée*.
+- **Sorties & Stocks Vendeurs** : 0 sortie enregistrée.
+- **Ventes & Dépenses** : 0 FCFA.
+- **Tiroirs de Caisse** : 0 FCFA, prêt pour l'attribution des fonds de caisse réels du jour.

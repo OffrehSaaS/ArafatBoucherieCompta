@@ -250,76 +250,36 @@ export default function LoginPage() {
           </div>
         </form>
 
-        {/* Quick Credentials Chips for Test & Production */}
+        {/* Unique Access for Directeur Général */}
         <div className="pt-3 border-t border-slate-800/80 space-y-2">
           <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider text-center">
-            Comptes d'accès rapide (Cliquez pour remplir)
+            Accès Unique Administrateur
           </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('superadmin@arafat.com');
-                setPassword('Admin2026!');
-                setError('');
-              }}
-              className="p-2 bg-slate-950/80 hover:bg-slate-850 border border-emerald-500/30 rounded-xl text-left transition-colors cursor-pointer"
-            >
-              <div className="flex items-center space-x-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                <span className="text-[11px] font-extrabold text-white">Super Admin</span>
+          <button
+            type="button"
+            onClick={() => {
+              setEmail('directeur@arafat.com');
+              setPassword('Admin2026!');
+              setError('');
+            }}
+            className="w-full p-3 bg-slate-950/80 hover:bg-slate-850 border border-emerald-500/40 rounded-2xl text-left transition-all cursor-pointer shadow-lg shadow-emerald-500/5 group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="text-xs font-black text-white group-hover:text-emerald-400 transition-colors">
+                  Directeur Général (Admin)
+                </span>
               </div>
-              <p className="text-[9px] text-slate-400 mt-0.5 font-mono truncate">superadmin@arafat.com</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('admin@arafat.com');
-                setPassword('Admin2026!');
-                setError('');
-              }}
-              className="p-2 bg-slate-950/80 hover:bg-slate-850 border border-slate-800 rounded-xl text-left transition-colors cursor-pointer"
-            >
-              <div className="flex items-center space-x-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span className="text-[11px] font-extrabold text-white">Admin Principal</span>
-              </div>
-              <p className="text-[9px] text-slate-400 mt-0.5 font-mono truncate">admin@arafat.com</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('directeur@arafat.com');
-                setPassword('Admin2026!');
-                setError('');
-              }}
-              className="p-2 bg-slate-950/80 hover:bg-slate-850 border border-slate-800 rounded-xl text-left transition-colors cursor-pointer"
-            >
-              <div className="flex items-center space-x-1.5">
-                <span className="w-2 h-2 rounded-full bg-teal-400"></span>
-                <span className="text-[11px] font-extrabold text-white">Directeur Général</span>
-              </div>
-              <p className="text-[9px] text-slate-400 mt-0.5 font-mono truncate">directeur@arafat.com</p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('vendeur@arafat.com');
-                setPassword('Vendeur2026!');
-                setError('');
-              }}
-              className="p-2 bg-slate-950/80 hover:bg-slate-850 border border-slate-800 rounded-xl text-left transition-colors cursor-pointer"
-            >
-              <div className="flex items-center space-x-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                <span className="text-[11px] font-extrabold text-white">Vendeur</span>
-              </div>
-              <p className="text-[9px] text-slate-400 mt-0.5 font-mono truncate">vendeur@arafat.com</p>
-            </button>
-          </div>
+              <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-md border border-emerald-500/20">
+                1 Clic pour remplir
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1 font-mono">directeur@arafat.com · Admin2026!</p>
+          </button>
+          <p className="text-[10px] text-slate-500 text-center leading-relaxed font-light">
+            Les vendeurs s'inscrivent via « Créer un compte » et sont approuvés par le Directeur Général.
+          </p>
         </div>
 
         {/* Signup redirection link */}
