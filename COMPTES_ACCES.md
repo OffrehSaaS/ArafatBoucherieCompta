@@ -1,45 +1,59 @@
-# 🥩 ArafatBoucherieCompta — Identifiants d'Accès
+# 🥩 DE Gestion (ArafatBoucherieCompta) — Identifiants d'Accès
 
-Ce document récapitule les comptes d'accès pré-configurés pour se connecter et tester l'application **DE Gestion**.
+Ce document récapitule tous les comptes d'accès configurés et synchronisés pour se connecter à l'application **DE Gestion** aussi bien en **Production** (Supabase) qu'en **Local** (Démo).
 
 ---
 
-## 👑 1. Comptes Administrateurs (Accès Total)
+## ⚡ Remplissage en 1 Clic
+Sur la page de connexion ([/login](file:///c:/Users/DELL/OneDrive/Documents/ArafatBoucherieCompta/src/app/login/page.tsx)), des boutons rapides permettent de pré-remplir automatiquement les identifiants d'un simple clic.
 
-### Nouveau Compte Administrateur :
+---
+
+## 👑 1. Comptes Administrateurs & Super Admin (Accès Total)
+
+### 🌟 Compte Super Administrateur :
+- **Email** : `superadmin@arafat.com`
+- **Mot de passe** : `Admin2026!`
+- **Nom** : Super Administrateur
+- **Rôle** : `super_admin` / `admin` (Contrôle total, supervision globale, accès au stock frigo, gestion des rôles, finances et paramètres)
+
+### 👔 Compte Directeur Général :
 - **Email** : `directeur@arafat.com`
 - **Mot de passe** : `Admin2026!`
 - **Nom** : Directeur Général
-- **Rôle** : `admin` (Accès complet : Dashboard global, Sorties de stock, Approbations de retours de stock, Employés, Salaires, Dettes, Rapports, Paramètres)
+- **Rôle** : `admin`
 
-### Compte Administrateur Historique :
+### 🛡️ Compte Administrateur Principal :
 - **Email** : `admin@arafat.com`
-- **Mot de passe** : `admin`
+- **Mot de passe** : `Admin2026!` *(accepte aussi `admin`)*
 - **Nom** : Brahim Ould
 - **Rôle** : `admin`
 
+### 🏢 Compte Administrateur Diner Express :
+- **Email** : `admin@dinerexpress.tg`
+- **Mot de passe** : `Admin2026!`
+- **Nom** : Administrateur Diner Express
+- **Rôle** : `super_admin` / `admin`
+
 ---
 
-## 🛒 2. Comptes Vendeurs (Espace Personnel)
+## 🛒 2. Comptes Vendeurs (Stock & Caisse Individuels)
 
-### Nouveau Compte Vendeur :
+### 👤 Compte Vendeur Principal :
+- **Email** : `vendeur@arafat.com`
+- **Mot de passe** : `Vendeur2026!` *(accepte aussi `vendeur`)*
+- **Nom** : Fatoumata Barry
+- **Rôle** : `vendeur` (Mon Stock du Jour alloué, Ventes, Mon Tiroir Caisse quotidien)
+
+### 👤 Compte Vendeur Adjoint :
 - **Email** : `amadou@arafat.com`
 - **Mot de passe** : `Vendeur2026!`
 - **Nom** : Amadou Diallo
-- **Rôle** : `vendeur` (Accès personnalisé : Dashboard vendeur personnel, Stock en possession, Déclaration et retour de stock pour approbation, Ventes, Dépenses, Caisse)
-
-### Compte Vendeur Historique :
-- **Email** : `vendeur@arafat.com`
-- **Mot de passe** : `vendeur`
-- **Nom** : Fatoumata Barry
 - **Rôle** : `vendeur`
 
 ---
 
-## 🔄 3. Fonctionnalités Utiles
-
-- **Bascule de Rôle en Direct** : Lorsque vous êtes connecté avec un compte Administrateur, un bouton dans la barre latérale vous permet de basculer instantanément en mode **Vendeur** pour tester la vue personnelle, puis de revenir en **Admin** en un clic.
-- **Flux d'Approbation du Stock** :
-  1. L'Admin enregistre une sortie de viande vers le vendeur sur la page `/sorties`.
-  2. Le Vendeur voit son lot sur son Dashboard personnel et clique sur **"Clôturer / Retourner le Stock"**.
-  3. L'Admin reçoit la demande sur son Dashboard et clique sur **"Approuver le retour"** pour réintégrer les invendus au frigo et générer le chiffre d'affaires.
+## 🔒 Confidentialité & Rôles
+1. **Accès Stock au Frigo** : Réservé exclusivement aux administrateurs.
+2. **Caisse Quotidienne** : L'administrateur attribue chaque matin un fond de caisse propre à chaque vendeur.
+3. **Confidentialité** : Les vendeurs ne voient ni les ventes ni la caisse de leurs collègues, et aucun salaire n'est affiché pour les vendeurs.

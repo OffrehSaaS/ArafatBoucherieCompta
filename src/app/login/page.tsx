@@ -250,8 +250,80 @@ export default function LoginPage() {
           </div>
         </form>
 
+        {/* Quick Credentials Chips for Test & Production */}
+        <div className="pt-3 border-t border-slate-800/80 space-y-2">
+          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider text-center">
+            Comptes d'accès rapide (Cliquez pour remplir)
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('superadmin@arafat.com');
+                setPassword('Admin2026!');
+                setError('');
+              }}
+              className="p-2 bg-slate-950/80 hover:bg-slate-850 border border-emerald-500/30 rounded-xl text-left transition-colors cursor-pointer"
+            >
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span className="text-[11px] font-extrabold text-white">Super Admin</span>
+              </div>
+              <p className="text-[9px] text-slate-400 mt-0.5 font-mono truncate">superadmin@arafat.com</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('admin@arafat.com');
+                setPassword('Admin2026!');
+                setError('');
+              }}
+              className="p-2 bg-slate-950/80 hover:bg-slate-850 border border-slate-800 rounded-xl text-left transition-colors cursor-pointer"
+            >
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="text-[11px] font-extrabold text-white">Admin Principal</span>
+              </div>
+              <p className="text-[9px] text-slate-400 mt-0.5 font-mono truncate">admin@arafat.com</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('directeur@arafat.com');
+                setPassword('Admin2026!');
+                setError('');
+              }}
+              className="p-2 bg-slate-950/80 hover:bg-slate-850 border border-slate-800 rounded-xl text-left transition-colors cursor-pointer"
+            >
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-teal-400"></span>
+                <span className="text-[11px] font-extrabold text-white">Directeur Général</span>
+              </div>
+              <p className="text-[9px] text-slate-400 mt-0.5 font-mono truncate">directeur@arafat.com</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('vendeur@arafat.com');
+                setPassword('Vendeur2026!');
+                setError('');
+              }}
+              className="p-2 bg-slate-950/80 hover:bg-slate-850 border border-slate-800 rounded-xl text-left transition-colors cursor-pointer"
+            >
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span className="text-[11px] font-extrabold text-white">Vendeur</span>
+              </div>
+              <p className="text-[9px] text-slate-400 mt-0.5 font-mono truncate">vendeur@arafat.com</p>
+            </button>
+          </div>
+        </div>
+
         {/* Signup redirection link */}
-        <div className="text-center text-xs text-slate-500">
+        <div className="text-center text-xs text-slate-500 pt-1">
           Nouveau sur DE Gestion ?{' '}
           <Link href="/register" className="text-emerald-400 hover:text-emerald-350 font-bold transition-colors">
             Créer un compte

@@ -2090,9 +2090,11 @@ export class LocalDbStore {
   // User Account Management
   static getAccounts(): UserAccount[] {
     const DEFAULT_ACCOUNTS: UserAccount[] = [
-      { id: 'acc-1', email: 'admin@arafat.com', fullName: 'Brahim Ould', phone: '+226 70 00 11 22', role: 'admin', companyName: 'Boucherie Arafat', password: 'admin', status: 'active', createdAt: '2026-07-01T08:00:00Z', canManageStock: true },
+      { id: 'acc-superadmin', email: 'superadmin@arafat.com', fullName: 'Super Administrateur', phone: '+226 70 99 99 99', role: 'admin', companyName: 'Boucherie Arafat', password: 'Admin2026!', status: 'active', createdAt: '2026-08-01T08:00:00Z', canManageStock: true },
+      { id: 'acc-1', email: 'admin@arafat.com', fullName: 'Brahim Ould', phone: '+226 70 00 11 22', role: 'admin', companyName: 'Boucherie Arafat', password: 'Admin2026!', status: 'active', createdAt: '2026-07-01T08:00:00Z', canManageStock: true },
       { id: 'acc-admin-new', email: 'directeur@arafat.com', fullName: 'Directeur Général', phone: '+226 70 12 34 56', role: 'admin', companyName: 'Boucherie Arafat', password: 'Admin2026!', status: 'active', createdAt: '2026-08-01T08:00:00Z', canManageStock: true },
-      { id: 'acc-2', email: 'vendeur@arafat.com', fullName: 'Fatoumata Barry', phone: '+226 73 11 22 33', role: 'vendeur', password: 'vendeur', status: 'active', createdAt: '2026-07-02T09:00:00Z', canManageStock: false },
+      { id: 'acc-diner', email: 'admin@dinerexpress.tg', fullName: 'Administrateur Diner Express', phone: '+228 90 00 00 00', role: 'admin', companyName: 'DE Gestion', password: 'Admin2026!', status: 'active', createdAt: '2026-08-01T08:00:00Z', canManageStock: true },
+      { id: 'acc-2', email: 'vendeur@arafat.com', fullName: 'Fatoumata Barry', phone: '+226 73 11 22 33', role: 'vendeur', password: 'Vendeur2026!', status: 'active', createdAt: '2026-07-02T09:00:00Z', canManageStock: false },
       { id: 'acc-vendeur-new', email: 'amadou@arafat.com', fullName: 'Amadou Diallo', phone: '+226 76 54 32 10', role: 'vendeur', password: 'Vendeur2026!', status: 'active', createdAt: '2026-08-01T09:00:00Z', canManageStock: false },
       { id: 'acc-3', email: 'moussa@arafat.com', fullName: 'Moussa Sawadogo', phone: '+226 74 22 33 44', role: 'vendeur', password: 'moussa', status: 'pending', createdAt: '2026-07-12T17:30:00Z', canManageStock: false }
     ];
